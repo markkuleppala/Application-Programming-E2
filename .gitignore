@@ -1,6 +1,7 @@
-.vscode*
-threadbank.dSYM*
 *
 !/**/
 !*.*
 !makefile
+*vscode/
+threadbank.dSYM/
+.DS_Store
