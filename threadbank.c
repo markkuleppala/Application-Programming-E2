@@ -212,14 +212,14 @@ int main(void) {
         pid_t pid_c = 0;
         queue_arr = calloc(n-1, sizeof *queue_arr); // vaikko n?
         if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
-        int fd[2*n]; // Initializing file describtors for pipes
+        int fd[2*n];
         int i;
         printf("n %d\n", n);
         for (i = 0; i < n; i++) {
             pid_c = fork();
             if (pid_c < 0) { printf("Fork failed.\n"); }
             else if (pid_c == 0) { // Children
-                threadcounter(i, fd); // Problem with async
+                threadcounter(i, fd);
             }
             pipe(&fd[2*i]);
             //close(fd[2*i+READ]);
