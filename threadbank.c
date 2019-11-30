@@ -151,29 +151,31 @@ int handlerequest(char *request) { // added *
         action[i] = ptr;
         ptr = strtok(NULL, " ");
     }
-    if (strcmp(action[0], "l") == 0) {
+    if (strcmp(action[0], "l") == 0) { // l - give balance
         int l = balance(action[1]);
         printf("l: %d\n", l);
         return 0; // return 1?
     }
-    else if (strcmp(action[0], "d") == 0) {
+    else if (strcmp(action[0], "d") == 0) { // d - deposit
         double d = deposit(action[1], action[2]);
         printf("d in 161: %f\n", d);
         //return atoi(action[2]);
         return d; // What to return?
     }
-    else if (strcmp(action[0], "w") == 0) {
+    else if (strcmp(action[0], "w") == 0) { // w - withdraw
         int w = withdraw(action[1], action[2]);
         if (w >= 0) { return -atoi(action[2]); }
         else { return 0; }
     }
-    else if (strcmp(action[0], "t") == 0) {
+    else if (strcmp(action[0], "t") == 0) { // t - transfer
         int t = transfer(action[1], action[2], action[3]);
         if (t > 0) { return 1; }
         else { return 0; }
     }
-    else { printf("Invalid request!\n"); }
-    return -1;
+    else { // Unknown request
+        printf("Invalid request!\n");
+        return -1;
+    }
 }
 
 void threadcounter(int i, int fd[]) {
