@@ -9,4 +9,4 @@ all: threadbank
 
 # Compile threadbank executable
 threadbank:  threadbank.c
-	$(CC) $(CFLAGS) -o threadbank threadbank.c
+	$(CC) $(CFLAGS) -o threadbank threadbank.c -lpthread
