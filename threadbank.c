@@ -21,7 +21,7 @@ void sig_handler(int signo) { // Catching signals
         printf("Control-C pressed, exiting the program.\n");
         free(queue_arr);
         kill(0,SIGTERM);
-        exit(EXIT_FAILURE); 
+        exit(EXIT_FAILURE);
     }
 } 
 
@@ -55,18 +55,18 @@ void forkcounter(int i, int fd[]) {
 }
 */
 
-int getlastline(char *number) { // Get balance - Check that file exists, if not, create an empty one
+double getlastline(char *account) { // Get balance - Check that file exists, if not, create an empty one
     //char line[1024]={0,};
     char tmp[1024];
-    double balance;
-    char *account_name = malloc(sizeof(char)*strlen(number)+6); // Allocating array
-    sprintf(account_name, "%s.bank", number); // Writing id + .bank
+    double balance = 0;
+    char *account_name = malloc(sizeof(char)*strlen(account)+6); // Allocating array
+    sprintf(account_name, "%s.bank", account); // Writing id + .bank
+    printf("account number: %d\n", atoi(account));
     FILE *f;
     if (access(account_name, F_OK) == -1) { // File doesn't exist
         printf("Creating a new account.\n");
-        balance = 0;
         f = fopen(account_name, "a");
-        fprintf(f, "%.2f", balance); // +/n?
+        fprintf(f, "%.2f", balance);
     }
     else {
         f = fopen(account_name, "r");
@@ -81,47 +81,59 @@ int getlastline(char *number) { // Get balance - Check that file exists, if not,
     return balance;
 }
 
-int balance(char *number) {
+void write_balance(char *account, double *value) {
+    char *account_name = malloc(sizeof(char)*strlen(account)+6); // Allocating array
+    sprintf(account_name, "%s.bank", account); // Writing id + .bank
+    FILE *f = fopen(account_name, "ab+");
+    fprintf(f, "\n%.2f", *value);
+    printf("writing to %s value %.2f", account_name, *value);
+    fclose(f);
+    free(account_name);
+}
+
+double balance(char *number) {
     double balance = getlastline(number);
-    //printf("Balance of XX is: %f.\n", balance);
+    printf("Balance of XX is: %.2f.\n", balance);
     return balance;
 }
 
-int deposit(char *number, char *amount) { // int *number, int *amount) { 
+double deposit(char *account, char *value) { // int *number, int *amount) { 
 
     // Write lock
-    double new_balance = getlastline(number) + atof(amount);
-    printf("new balance 94: %f\n", new_balance);
+    double new_balance = getlastline(account) + atof(value);
+    write_balance(account, &new_balance);
     // Append new balance to the end
     // Write lock away
     return new_balance;
 }
 
-int withdraw(char *number, char *amount) { // int *number, int *amount) { 
+double withdraw(char *account, char *value) {
 
     // Write lock
-    double balance = getlastline(number);
-    if (balance >= atoi(amount)) {
-        double new_balance = balance - atof(amount);
+
+    double balance = getlastline(account);
+    if (balance >= atoi(value)) {
+        double *new_balance = &balance - atoi(value);
         // Write new balance to file
+        write_balance(account, new_balance);
     }
     else {
-        printf("Insufficient amount on the account.\n");
+        printf("Insufficient value on the account.\n");
         return 0;
     }
     // Write lock away
     return 1;
 }
 
-int transfer(char *account1, char *account2, char *amount) {
+double transfer(char *account1, char *account2, char *value) {
     // Write locks (and read locks)
-    int balance1 = getlastline(account1);
-    if (balance1 >= atoi(amount)) {
-        withdraw(account1, amount);
-        deposit(account2, amount);
+    double balance1 = getlastline(account1);
+    if (balance1 >= atoi(value)) {
+        withdraw(account1, value);
+        deposit(account2, value);
     }
     else {
-        printf("Insufficient amount on the account.\n");
+        printf("Insufficient value on the account.\n");
         return -1;
     }
     // Write locks away
@@ -142,71 +154,58 @@ int shortestline(void) {
     return location;
 }
 
-int handlerequest(char *request) { // added *
-    char *ptr = strtok(request, " "); // removed &
-    int i_max = 3;
+void handlerequest(void *voidData) {
+    char *request = voidData;
+    char *ptr = strtok(request, " ");
+    int i_max;
     if (strcmp(ptr, "l") == 0) { i_max = 2; }
+    else if (strcmp(ptr, "t") == 0) { i_max = 4; }
+    else { i_max = 3; }
     char *action[i_max+1]; // malloc?
-    for (int i = 0 ; i < i_max; i++) {
+    for (int i = 0 ; i < i_max; i++) { // Read the request
         action[i] = ptr;
         ptr = strtok(NULL, " ");
     }
     if (strcmp(action[0], "l") == 0) { // l - give balance
-        int l = balance(action[1]);
-        printf("l: %d\n", l);
-        return 0; // return 1?
+        double l = balance(action[1]);
     }
     else if (strcmp(action[0], "d") == 0) { // d - deposit
         double d = deposit(action[1], action[2]);
-        printf("d in 161: %f\n", d);
-        //return atoi(action[2]);
-        return d; // What to return?
     }
     else if (strcmp(action[0], "w") == 0) { // w - withdraw
-        int w = withdraw(action[1], action[2]);
-        if (w >= 0) { return -atoi(action[2]); }
-        else { return 0; }
+        double w = withdraw(action[1], action[2]);
     }
     else if (strcmp(action[0], "t") == 0) { // t - transfer
-        int t = transfer(action[1], action[2], action[3]);
-        if (t > 0) { return 1; }
-        else { return 0; }
+        double t = transfer(action[1], action[2], action[3]);
     }
     else { // Unknown request
         printf("Invalid request!\n");
-        return -1;
     }
 }
 
-void threadcounter(int i, int fd[]) {
+void desk(int i, int fd1[], int fd2[]) {
     pthread_t thread_id;
-    pid_t pid_c = -1;
-    int status;
+    //pid_t pid_c = -1;
+    //int status;
     char read_buffer[SIZE];
     double deposit_counter = 0;
     double withdraw_counter = 0;
-    pthread_create(&thread_id, NULL, counter, (void*)&thread_id);
+    //pthread_create(&thread_id, NULL, counter, (void*)&thread_id);
     //close(fd[2*i+WRITE]);
-    printf("Counter number %d created with TID %d.\n", i, (int)thread_id); // Does not return the correct thread value
+    //printf("Counter number %d created with TID %d.\n", i, (int)thread_id); // Does not return the correct thread value
     while(1) { // Get task from master thread and handle the queue
-        if (read(fd[2*i], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread flag checker before continuing
-            //printf("readbuffer %s of %d", read_buffer, i);
+        if (read(fd1[2*i], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread flag checker before continuing
+            printf("readbuffer %s of %d\n", read_buffer, i);
             /*if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
                 read_buffer[strlen(read_buffer) - 1] = '\0';
                 printf("Read buffer: %s of %d\n", read_buffer, i);
             }*/
-            pid_c = fork(); // Handle the request
-            if (pid_c < 0) { printf("Fork failed.\n"); }
-            else if (pid_c == 0) { // Children
-                printf("Children number: %d\n", i);
-                int ret = handlerequest(read_buffer);
-                printf("Return from handlerequest in %d: %i\n", i, ret);
-                exit(0);
-            }
-            else { // Parent wait for termination
-                wait(NULL);
-                queue_arr[i]--;
-            }        
+            //pid_c = fork(); // Handle the request
+            //if (pid_c < 0) { printf("Fork failed.\n"); }
+            //else if (pid_c == 0) { // Children
+                //printf("Children number: %d\n", i);
+            pthread_create(&thread_id, NULL, handlerequest, (void*)&read_buffer);
+            pthread_join(thread_id, NULL);   
         }
     }
 }
@@ -220,62 +219,45 @@ int main(void) {
     else if (n < 1) { printf("Apparently we are closed today. Until tomorrow!\n"); exit(1); } // 0
     else { // 1..N
         pid_t pid_c = 0; // PID child
-        queue_arr = calloc(n-1, sizeof *queue_arr); // vaikko n?
+        queue_arr = calloc(n, sizeof *queue_arr);
         if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
-        int fd[2*n]; // Two pipes per process
+        int fd1[2*n]; // Master to desk, d1[0] to read and fd1[1] to write
+        int fd2[2*n]; // Desk to master
         int i;
         //printf("n %d\n", n);
         for (i = 0; i < n; i++) { // Create all processes and open pipes
+            if (pipe(fd1) == -1) { fprintf(stderr, "Pipe 1 Failed\n"); } // Open pipe fd1
+            if (pipe(fd2) == -1) { fprintf(stderr, "Pipe 2 Failed\n"); } // Open pipe fd2
             pid_c = fork(); // Fork process
             if (pid_c < 0) { printf("Fork failed.\n"); }
             else if (pid_c == 0) { // Child process
-                threadcounter(i, fd); // Child becomes the counter
+                close(fd1[WRITE]); // Close writing end of fd1
+                close(fd2[READ]); // Close reading end of fd2
+                desk(i, fd1, fd2); // Child becomes the counter - replace with exec?
             }
-            pipe(&fd[2*i]); // Create pipe (even) for master->counter(?) communication
-            //close(fd[2*i+READ]);
+            else { // Parent process
+                close(fd1[2*i+READ]); // Close reading end of fd1
+                close(fd2[2*i+WRITE]); // Close writing end of fd2
+            }
         }
         printf("Great! The bank is open!\n");
         printf("The bank offers four different services:\nbalance (l), withdraw (w), transfer (t), deposit (d).\n");
 
-        //char *action[4];
-        //char *ptr;
-        char *request = malloc(INPUT_SIZE);
+        char *request = malloc(INPUT_SIZE); // Initialize request
         if (request == NULL) { printf("No memory.\n"); }
         //queue_arr[0] = 2;
         //printf("%d\n", shortestline());
 
 
         while(signal(SIGINT, sig_handler) != SIG_ERR) {
-            fgets(request, INPUT_SIZE, stdin);
-            /*if ((strlen(request) > 0) && (request[strlen(request) - 1] == '\n')) {
-                request[strlen(request) - 1] = '\0';
-            }*/
-            write(fd[2*shortestline()+WRITE], request, SIZE);
-            queue_arr[i]++;
-            /*
-            ptr = strtok(request, " ");
-            int i_max = 3;
-            if (strcmp(ptr, "l") == 0) { i_max = 2; }
-            for (i = 0 ; i < i_max; i++) {
-                action[i] = ptr;
-                ptr = strtok(NULL, " ");
+            if (fgets(request, INPUT_SIZE, stdin) != NULL) {
+                if ((strlen(request) > 0) && (request[strlen(request) - 1] == '\n')) {
+                    request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
+                }
+                write(fd1[2*0+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
+                //write(fd[2*shortestline()+WRITE], request, SIZE);
+                //queue_arr[i]++;
             }
-            if (strcmp(action[0], "l") == 0) {
-                int l = balance(action[1]);
-                printf("%d", l);
-            }
-            else if (strcmp(action[0], "d") == 0) {
-                int d = deposit(action[1], action[2]);
-                printf("%d", d);
-            }
-            else if (strcmp(action[0], "w") == 0) {
-                int w = withdraw(action[1], action[2]);
-            }
-            else if (strcmp(action[0], "t") == 0) {
-                int t = transfer(action[1], action[2], action[3]);
-            }
-            */
-           //handlerequest(input);
         }
     }
     return 0;
