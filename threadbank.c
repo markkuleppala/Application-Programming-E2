@@ -86,14 +86,14 @@ void write_balance(char *account, double *value) {
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
     FILE *f = fopen(account_name, "ab+");
     fprintf(f, "\n%.2f", *value);
-    printf("writing to %s value %.2f", account_name, *value);
+    printf("writing to %s value %.2f\n", account_name, *value);
     fclose(f);
     free(account_name);
 }
 
 double balance(char *number) {
     double balance = getlastline(number);
-    printf("Balance of XX is: %.2f.\n", balance);
+    printf("Balance of %s is: %.2f.\n", number, balance);
     return balance;
 }
 
@@ -102,31 +102,31 @@ double deposit(char *account, char *value) { // int *number, int *amount) {
     // Write lock
     double new_balance = getlastline(account) + atof(value);
     write_balance(account, &new_balance);
-    // Append new balance to the end
     // Write lock away
     return new_balance;
 }
 
 double withdraw(char *account, char *value) {
 
-    // Write lock
+    // Write lock, use exec
 
     double balance = getlastline(account);
-    if (balance >= atoi(value)) {
-        double *new_balance = &balance - atoi(value);
+    if (balance >= atof(value)) {
+        printf("Withdraw balance in %s is %f\n", account, balance);
+        double new_balance = balance - atoi(value);
         // Write new balance to file
-        write_balance(account, new_balance);
+        write_balance(account, &new_balance);
     }
     else {
         printf("Insufficient value on the account.\n");
-        return 0;
+        return -1;
     }
-    // Write lock away
+    // Write lock away, use exec
     return 1;
 }
 
 double transfer(char *account1, char *account2, char *value) {
-    // Write locks (and read locks)
+    // Write locks (and read locks), use exec
     double balance1 = getlastline(account1);
     if (balance1 >= atoi(value)) {
         withdraw(account1, value);
@@ -136,7 +136,7 @@ double transfer(char *account1, char *account2, char *value) {
         printf("Insufficient value on the account.\n");
         return -1;
     }
-    // Write locks away
+    // Write locks away, use exec
     return 1;
 }
 
@@ -154,9 +154,15 @@ int shortestline(void) {
     return location;
 }
 
-void handlerequest(void *voidData) {
-    char *request = voidData;
-    char *ptr = strtok(request, " ");
+struct Data {
+    char *readbuffer;
+    int d;
+};
+
+void *handlerequest(void *data) {
+    printf("voidData->readbuffer %s\n", ((struct Data *)data)->readbuffer);
+    printf("voidData->d %d\n", ((struct Data *)data)->d); 
+    char *ptr = strtok(((struct Data *)data)->readbuffer, " ");
     int i_max;
     if (strcmp(ptr, "l") == 0) { i_max = 2; }
     else if (strcmp(ptr, "t") == 0) { i_max = 4; }
@@ -170,7 +176,13 @@ void handlerequest(void *voidData) {
         double l = balance(action[1]);
     }
     else if (strcmp(action[0], "d") == 0) { // d - deposit
-        double d = deposit(action[1], action[2]);
+        //double d = deposit(action[1], action[2]);
+        if (deposit(action[1], action[2])) {
+            //deposit_var = atoi(action[2]);
+            ((struct Data *)data)->d = atoi(action[2]);
+            //printf("deposit_var %d\n", deposit_var); 
+            //pthread_exit((void *)&deposit_var);
+        }
     }
     else if (strcmp(action[0], "w") == 0) { // w - withdraw
         double w = withdraw(action[1], action[2]);
@@ -181,6 +193,8 @@ void handlerequest(void *voidData) {
     else { // Unknown request
         printf("Invalid request!\n");
     }
+    //pthread_exit((void *)&deposit_var);
+    return NULL;
 }
 
 void desk(int i, int fd1[], int fd2[]) {
@@ -190,22 +204,30 @@ void desk(int i, int fd1[], int fd2[]) {
     char read_buffer[SIZE];
     double deposit_counter = 0;
     double withdraw_counter = 0;
+    //void *d;
+    //d = (int *)malloc(sizeof(int));
+    int d = 0;
+    struct Data data;
     //pthread_create(&thread_id, NULL, counter, (void*)&thread_id);
     //close(fd[2*i+WRITE]);
     //printf("Counter number %d created with TID %d.\n", i, (int)thread_id); // Does not return the correct thread value
     while(1) { // Get task from master thread and handle the queue
         if (read(fd1[2*i], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread flag checker before continuing
-            printf("readbuffer %s of %d\n", read_buffer, i);
-            /*if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
+            //printf("readbuffer %s of %d\n", read_buffer, i);
+            if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
                 read_buffer[strlen(read_buffer) - 1] = '\0';
                 printf("Read buffer: %s of %d\n", read_buffer, i);
-            }*/
+            }
             //pid_c = fork(); // Handle the request
             //if (pid_c < 0) { printf("Fork failed.\n"); }
             //else if (pid_c == 0) { // Children
                 //printf("Children number: %d\n", i);
-            pthread_create(&thread_id, NULL, handlerequest, (void*)&read_buffer);
-            pthread_join(thread_id, NULL);   
+            d = 0;
+            data.readbuffer = read_buffer;
+            data.d = d;
+            pthread_create(&thread_id, NULL, handlerequest, (void*)&data); // Removed &
+            pthread_join(thread_id, NULL);//(void**)&d);
+            printf("deposit %d\n", data.d);
         }
     }
 }
