@@ -10,6 +10,7 @@
 #include <fcntl.h> /* fcntl */
 #include <signal.h> /* signal */
 #include <unistd.h>
+#include <sys/mman.h> /* mmap */
 
 
 #define SIZE 1024
@@ -21,5 +22,6 @@
 //int queue_arr; // vaikko char
 int *queue_arr;
 int flag;
+int n;
 
 #endif // THREADBANK_H_

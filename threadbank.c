@@ -3,12 +3,14 @@
 void sig_handler(int signo) { // Catching signals
     if (signo == SIGINT) { 
         printf("Control-C pressed, exiting the program.\n");
-        free(queue_arr);
         //exec("rm *.bank"); // run rm *.bank
+        if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
+            perror("munmap failed with error: ");
+        }
         kill(0,SIGTERM);
         exit(EXIT_FAILURE);
     }
-} 
+}
 
 void *counter(void *vargp) {
     //int *id = (int *)vargp;
@@ -123,11 +125,12 @@ double transfer(char *account1, char *account2, char *value) {
     return 1;
 }
 
+// Get the shortest line of the desks
 int shortestline(void) {
     int i;
     int location = 0;
     int min = queue_arr[0];
-    size_t s = sizeof(*queue_arr)/sizeof(queue_arr[0]);
+    size_t s = sizeof(&queue_arr)/sizeof(queue_arr[0]);
     for (i = 1; i < s; i++) {
         if (queue_arr[i] < min) {
             min = queue_arr[i];
@@ -137,6 +140,7 @@ int shortestline(void) {
     return location;
 }
 
+// Data helper struct for desk-specific deposit and withdrawal
 struct Data {
     char *readbuffer;
     int d;
@@ -161,7 +165,9 @@ void *handlerequest(void *data) {
     }
     if (strcmp(action[0], "l") == 0) { // l - give balance
         if (balance(action[1])) {
-            printf("balance of %s checked\n", action[1]);
+            //printf("balance of %s checked\n", action[1]);
+        } else {
+            perror("Checking balance failed: ");
         }
     }
     else if (strcmp(action[0], "d") == 0) { // d - deposit
@@ -186,7 +192,6 @@ void *handlerequest(void *data) {
 }
 
 void desk(int j, int fd1[], int fd2[]) {
-    //printf("j %d\n", j);
     pthread_t thread_id;
     char read_buffer[SIZE];
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
@@ -201,30 +206,31 @@ void desk(int j, int fd1[], int fd2[]) {
             data.readbuffer = read_buffer;
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
             pthread_create(&thread_id, NULL, handlerequest, (void*)&data);
-            pthread_join(thread_id, NULL);
+            pthread_join(thread_id, NULL); // Waiting for the return of the task
             deposit_count += data.d;
             withdraw_count += data.w;
+            //printf("queue length in %d: %d\n", j, queue_arr[j]);
+            queue_arr[j]--; // Decrement the queue length
+            //printf("queue length in %d: %d\n", j, queue_arr[j]);
         }
     }
 }
 
 int main(int argc, char *argv[]) {
-    int n = atoi(argv[1]);
-    printf("n: %d", n);
+    n = atoi(argv[1]);
     if (n <= 0) { printf("Invalid input. Exiting.\n"); exit(1); }
-    printf("Welcome to ThreadBank manager! ");
-    printf("\n");
-    //if (scanf("%d%c", &n, &term) != 2 || term != '\n') { printf("Invalid input!\n"); exit(1); } // Invalid input
-    //else if (n < 1) { printf("Apparently we are closed today. Until tomorrow!\n"); exit(1); } // 0
-    //else { // 1..N
+    printf("Welcome to ThreadBank manager!\n");
     pid_t pid_c = 0; // PID child
-    queue_arr = (int *)calloc(n, sizeof(int));
-    if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
+    queue_arr = (int *)mmap(NULL, sizeof(int)*n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (queue_arr == MAP_FAILED) {
+        perror("Error mmapping the queue: ");
+        exit(EXIT_FAILURE);
+    }
+    //if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
     int fd1[2*n]; // Master to desk, d1[0] to read and fd1[1] to write
     int fd2[2*n]; // Desk to master
     for (int i = 0; i < n; i++) { // Create all processes and open pipes
-        //printf("n %d\n", i);
-        //queue_arr[i] = 0; // Is it needed as calloc initializes as zero?
+        ((int*)queue_arr)[i] = 0; // Is it needed as calloc initializes as zero?
         if (pipe(fd1 + 2*i) == -1) { fprintf(stderr, "Pipe 1 Failed\n"); } // Open pipe fd1
         if (pipe(fd2 + 2*i) == -1) { fprintf(stderr, "Pipe 2 Failed\n"); } // Open pipe fd2
         pid_c = fork(); // Fork process
@@ -235,7 +241,6 @@ int main(int argc, char *argv[]) {
             desk(i, fd1, fd2); // Child becomes the counter - replace with exec?
         }
         else { // Parent process
-            //dup2(fd1[2*i+WRITE, 1])
 
             close(fd1[2*i+READ]); // Close reading end of fd1
             close(fd2[2*i+WRITE]); // Close writing end of fd2
@@ -246,8 +251,6 @@ int main(int argc, char *argv[]) {
 
     char *request = malloc(INPUT_SIZE); // Initialize request
     if (request == NULL) { printf("No memory.\n"); }
-    //queue_arr[0] = 2;
-    //printf("%d\n", shortestline());
 
     int s;
 
@@ -256,12 +259,9 @@ int main(int argc, char *argv[]) {
             if ((strlen(request) > 0) && (request[strlen(request) - 1] == '\n')) {
                 request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
             }
-            s = shortestline();
-            printf("shortest line %d\n", s);
+            s = shortestline(); // Get the desk with shortest line
             queue_arr[s]++;
             write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
-            //write(fd[2*shortestline()+WRITE], request, SIZE);
-            //queue_arr[i]++;
         }
     }
     //}
