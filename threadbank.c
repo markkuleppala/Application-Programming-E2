@@ -12,42 +12,12 @@ void sig_handler(int signo) { // Catching signals
     }
 }
 
-void *counter(void *vargp) {
-    //int *id = (int *)vargp;
-    printf("This is counter number %d with PID %d.\n", (int)pthread_self(), (int)getpid());
-    return NULL;
-}
-/*
-void forkcounter(int i, int fd[]) {
-    pid_t pid_c = 0;
-    //pthread_t thread_id;
-    //char write_buffer[SIZE];
-    pid_c = fork();
-    if (pid_c < 0) { printf("Fork failed.\n"); }
-    else if (pid_c == 0) { // Children
-        pthread_t thread_id;
-        pthread_create(&thread_id, NULL, counter, (void*)&thread_id);
-        //pthread_join(thread_id, NULL);
-        close(fd[2*(i-1)]); 
-        // Open pipes based on i
-        //write(fd[2*(i-1) + 1], write_buffer, SIZE);
-        printf("Counter number %d created with PID %d.\n", i, (int)getpid());
-        exit(1);
-    }
-    else { // Parent
-        // Log creation of counter n
-        pipe(&fd[2*(i-1)]);
-        close(fd[2*(i-1) + 1]);
-    }
-}
-*/
-
 double getlastline(char *account) { // Get balance - Check that file exists, if not, create an empty one
     char tmp[1024];
     double balance = 0;
     char *account_name = malloc(sizeof(char)*strlen(account)+6); // Allocating array
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
-    printf("account number: %d\n", atoi(account));
+    //printf("account number: %d\n", atoi(account));
     FILE *f;
     if (access(account_name, F_OK) == -1) { // File doesn't exist
         printf("Creating a new account.\n");
@@ -164,10 +134,8 @@ void *handlerequest(void *data) {
         }
     }
     if (strcmp(action[0], "l") == 0) { // l - give balance
-        if (balance(action[1])) {
+        if (balance(action[1])) { // Returns the balance
             //printf("balance of %s checked\n", action[1]);
-        } else {
-            perror("Checking balance failed: ");
         }
     }
     else if (strcmp(action[0], "d") == 0) { // d - deposit
@@ -241,7 +209,6 @@ int main(int argc, char *argv[]) {
             desk(i, fd1, fd2); // Child becomes the counter - replace with exec?
         }
         else { // Parent process
-
             close(fd1[2*i+READ]); // Close reading end of fd1
             close(fd2[2*i+WRITE]); // Close writing end of fd2
         }
@@ -264,6 +231,4 @@ int main(int argc, char *argv[]) {
             write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
         }
     }
-    //}
-    return 0;
 }
