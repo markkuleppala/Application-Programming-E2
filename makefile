@@ -1,12 +1,22 @@
-# Compiler for C
 CC = gcc
-
-# Compiler flags
-CFLAGS  = -Wall -pedantic
+CFLAGS  = -Wall -pedantic #-lpthread
+DEPS = threadbank.h desk.h
+OBJ = threadbank.o desk.o
 
 # Define executables to be built
-all: threadbank
+all: threadbank lock clean
+
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 # Compile threadbank executable
-threadbank:  threadbank.c
-	$(CC) $(CFLAGS) -o threadbank threadbank.c -lpthread
+threadbank: $(OBJ)
+	$(CC) -o threadbank threadbank.o desk.o
+
+# Compile file lock executable
+lock:  lock.c
+	$(CC) -o lock lock.c $(CFLAGS)
+
+# Clean
+clean:
+	rm *.o

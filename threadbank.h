@@ -1,5 +1,5 @@
-#ifndef THREADBANK_H_
-#define THREADBANK_H_
+#ifndef THREADBANK_H
+#define THREADBANK_H
 
 #include <stdio.h> /* scanf, printf, fgets */
 #include <string.h> /* strtok */
@@ -12,27 +12,16 @@
 #include <sys/mman.h> /* mmap */
 #include <sys/types.h> /* gettid */
 
-#define SIZE 1024
 #define INPUT_SIZE 1024
 #define READ 0
 #define WRITE 1
 
 void sig_handler(int signo);
-double getlastline(char *account);
-void write_balance(char *account, double *value);
-double balance(char *number);
-double deposit(char *account, char *value);
-int withdraw(char *account, char *value);
-double transfer(char *account1, char *account2, char *value);
-int shortestline(void);
-struct Data;
-void *handlerequest(void *data);
-void desk(int j, int fd1[], int fd2[]);
 int main(int argc, char *argv[]);
 
 
 int *queue_arr; // Desk specific queues
-int flag; // Flag for reporting the withdrawals and deposits
+int flag = 0; // Flag for reporting the withdrawals and deposits
 int n; // Number of desks
 
-#endif // THREADBANK_H_
+#endif // THREADBANK_H
