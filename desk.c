@@ -113,7 +113,7 @@ void *handlerequest(void *data) {
     else { i_max = 3; }
     char *action[i_max+1]; // malloc?
     for (int i = 0 ; i < i_max; i++) { // Read the request
-        if ((action[i] = ptr) != NULL) {
+        if ((action[i] = ptr) != NULL){
             ptr = strtok(NULL, " ");
         }
         else {
@@ -155,10 +155,10 @@ void desk(int j, int fd1[], int fd2[]) {
     struct Data data; // Initializng data structure for passing variables between threads
     while(1) { // Get task from master thread and handle the queue
         if (read(fd1[2*j], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread checker before continuing
-            if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
-                read_buffer[strlen(read_buffer) - 1] = '\0';
-                printf("Read buffer: %s of %d\n", read_buffer, j);
-            }
+            //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
+            //    read_buffer[strlen(read_buffer) - 1] = '\0';
+            //    printf("Read buffer: %s of %d\n", read_buffer, j);
+            //}
             data.readbuffer = read_buffer;
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
             pthread_create(&thread_id, NULL, handlerequest, (void*)&data);

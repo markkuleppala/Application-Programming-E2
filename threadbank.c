@@ -9,13 +9,13 @@ void sig_handler(int signo) {
         if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
             perror("munmap failed with error: ");
         }
-        char cmd[10] = {"rm *.bank"};
-        system(cmd);
-        kill(0,SIGTERM);
+        char cmd[10] = {"rm *.bank"}; // Define command to remove all bank notes
+        system(cmd); // Remove all bank notes
+        kill(0,SIGTERM); // Terminate main program
         exit(EXIT_FAILURE);
     }
-    else if (signo == SIGINFO) { // CTRL+T
-        flag = 1;
+    else if (signo == SIGINFO) { // CTRL+T, master desk signal
+        flag = 1; // Raise the global flag
         printf("CTRL+T pressed, waiting for all desks to report to the master.\n");
         
     }
@@ -59,10 +59,8 @@ int main(int argc, char *argv[]) {
     int s;
 
     while(signal(SIGINT, sig_handler) != SIG_ERR) {
-        if (fgets(request, INPUT_SIZE, stdin) != NULL) {
-            if ((strlen(request) > 0) && (request[strlen(request) - 1] == '\n')) {
-                request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
-            }
+        if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) {
+            request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
             s = shortestline(); // Get the desk with shortest line
             queue_arr[s]++;
             write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
