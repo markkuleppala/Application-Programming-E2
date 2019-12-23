@@ -22,6 +22,16 @@ void sig_handler(int signo) {
 }
 
 int main(int argc, char *argv[]) {
+    struct sigaction act; // Initialize signal-handler
+    memset(&act, 0, sizeof(act)); // Set signal handler value as zero
+    act.sa_handler = sig_handler;
+
+    sigaction(SIGINT,  &act, 0); // Initialize SIGINT handler
+
+    if (!argv[1]) {
+        printf("Desk number required as variable. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }
     n = atoi(argv[1]);
     if (n <= 0) { printf("Invalid input. Exiting.\n"); exit(1); }
     printf("Welcome to ThreadBank manager!\n");
@@ -46,6 +56,7 @@ int main(int argc, char *argv[]) {
             desk(i, fd1, fd2); // Child becomes the counter - passing the number of desk and pipes
         }
         else { // Parent process
+            sigaction(SIGINFO,  &act, 0); // Initialized SIGINFO handler on the master thread for requesting deposits/withdrawals
             close(fd1[2*i+READ]); // Close reading end of fd1
             close(fd2[2*i+WRITE]); // Close writing end of fd2
         }
@@ -58,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     int s;
 
-    while(signal(SIGINT, sig_handler) != SIG_ERR) {
+    while(signal(SIGINT, sig_handler) != SIG_ERR || signal(SIGINFO, sig_handler) != SIG_ERR) {
         if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) {
             request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
             s = shortestline(); // Get the desk with shortest line

@@ -2,12 +2,12 @@
 #define THREADBANK_H
 
 #include <stdio.h> /* scanf, printf, fgets */
-#include <string.h> /* strtok */
+#include <string.h> /* strtok, memset */
 #include <stdlib.h>  /* atof */
 #include <pthread.h> /* pthread_create */
 #include <math.h> /* log10, abs, floor */
 #include <fcntl.h> /* fcntl */
-#include <signal.h> /* signal */
+#include <signal.h> /* signal, sigaction */
 #include <unistd.h>
 #include <sys/mman.h> /* mmap */
 #include <sys/types.h> /* gettid */

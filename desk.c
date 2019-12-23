@@ -118,7 +118,7 @@ void *handlerequest(void *data) {
         }
         else {
             fprintf(stderr, "Invalid request!\n");
-            break;
+            return NULL;
         }
     }
     if (strcmp(action[0], "l") == 0) { // l - give balance
