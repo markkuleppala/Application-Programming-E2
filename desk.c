@@ -1,4 +1,5 @@
 #include "desk.h"
+#include "threadbank.h"
 
 double getlastline(char *account) { // Get balance - Check that file exists, if not, create an empty one
     char tmp[1024];
@@ -149,16 +150,27 @@ void *handlerequest(void *data) {
 
 void desk(int j, int fd1[], int fd2[]) {
     pthread_t thread_id;
-    char read_buffer[SIZE];
+    int flag_local = 0;
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
-    struct Data data; // Initializng data structure for passing variables between threads
+    struct Data data; // Initializing data structure for passing variables between threads
     while(1) { // Get task from master thread and handle the queue
-        if (read(fd1[2*j], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread checker before continuing
+        //printf("check local flag\n");
+        if (*flag == 1) {
+            printf("check1\n");
+            if (flag_local == 0) {
+                write(fd2[2*j+WRITE], &data, sizeof(struct Data));
+                flag_local = 1;
+            }
+        }
+        else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread checker before continuing
+            printf("check\n");
+            if (flag_local == 1) { flag_local = 0; }
             //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
             //    read_buffer[strlen(read_buffer) - 1] = '\0';
             //    printf("Read buffer: %s of %d\n", read_buffer, j);
             //}
+            printf("check\n");
             data.readbuffer = read_buffer;
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
             pthread_create(&thread_id, NULL, handlerequest, (void*)&data);

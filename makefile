@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS  = -Wall -pedantic #-lpthread
+CFLAGS  = -Wall -pedantic#-lpthread
 DEPS = threadbank.h desk.h
 OBJ = threadbank.o desk.o
 

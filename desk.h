@@ -26,8 +26,9 @@ void *handlerequest(void *data);
 void desk(int j, int fd1[], int fd2[]);
 
 
-int *queue_arr; // Desk specific queues
+//int *queue_arr; // Desk specific queues
 //int flag = 0; // Flag for reporting the withdrawals and deposits
 int n; // Number of desks
+char read_buffer[SIZE];
 
 #endif // DESK_H

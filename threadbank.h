@@ -21,7 +21,9 @@ int main(int argc, char *argv[]);
 
 
 int *queue_arr; // Desk specific queues
-int flag = 0; // Flag for reporting the withdrawals and deposits
+int *flag; // Flag for reporting the withdrawals and deposits
 int n; // Number of desks
+int *fd1; // Master to desk, d1[0] to read and fd1[1] to write
+int *fd2; // Desk to master
 
 #endif // THREADBANK_H

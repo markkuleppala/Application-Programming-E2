@@ -15,9 +15,16 @@ void sig_handler(int signo) {
         exit(EXIT_FAILURE);
     }
     else if (signo == SIGINFO) { // CTRL+T, master desk signal
-        flag = 1; // Raise the global flag
+        *flag = 1; // Raise the global flag
         printf("CTRL+T pressed, waiting for all desks to report to the master.\n");
-        
+        int deposit_master, withdraw_master = 0;
+        for (int i = 0; i < n; i++) {
+            char read_buffer[SIZE];
+            while (read(fd2[2*i+READ], read_buffer, SIZE) > 0) {
+                printf("%s\n", read_buffer);
+            }
+            fprintf(stdout, "Got reading from desk %d\n", i);
+        }
     }
 }
 
@@ -36,14 +43,24 @@ int main(int argc, char *argv[]) {
     if (n <= 0) { printf("Invalid input. Exiting.\n"); exit(1); }
     printf("Welcome to ThreadBank manager!\n");
     pid_t pid_c = 0; // PID child
+
     queue_arr = (int *)mmap(NULL, sizeof(int)*n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (queue_arr == MAP_FAILED) {
         perror("Error mmapping the queue: ");
         exit(EXIT_FAILURE);
     }
+
+    flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    //*flag = 0;
+    if (flag == MAP_FAILED) {
+        perror("Error mmapping the flag: ");
+        exit(EXIT_FAILURE);
+    }
     //if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
-    int fd1[2*n]; // Master to desk, d1[0] to read and fd1[1] to write
-    int fd2[2*n]; // Desk to master
+    fd1 = malloc(2*n*sizeof(fd1)); // Master to desk, d1[0] to read and fd1[1] to write
+    fd2 = malloc(2*n*sizeof(fd2)); // Desk to master
+    printf("check1\n");
+
     for (int i = 0; i < n; i++) { // Create all processes and open pipes
         ((int*)queue_arr)[i] = 0; // Is it needed as calloc initializes as zero?
         if (pipe(fd1 + 2*i) == -1) { fprintf(stderr, "Pipe 1 Failed\n"); } // Open pipe fd1
