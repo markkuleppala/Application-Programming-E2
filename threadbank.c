@@ -5,6 +5,7 @@
 void sig_handler(int signo) {
     if (signo == SIGINT) { // CTRL+C
         printf("\nControl+C pressed, exiting the program.\n");
+        free(fd1); free(fd2); free(request); // Free the allocated variables
         //exec("rm *.bank"); // run rm *.bank
         if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
             perror("munmap failed with error: ");
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
     (n == 1) ? printf("1 desk is serving.\n") : printf("%d desks are serving.\n", n);
     printf("The bank offers four different services:\nbalance (l), withdraw (w), transfer (t), deposit (d).\n");
 
-    char *request = malloc(INPUT_SIZE); // Initialize request
+    request = malloc(INPUT_SIZE); // Initialize request
     if (request == NULL) { printf("No memory.\n"); }
 
     int s;

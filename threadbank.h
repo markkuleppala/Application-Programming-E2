@@ -25,5 +25,6 @@ int *flag; // Flag for reporting the withdrawals and deposits
 int n; // Number of desks
 int *fd1; // Master to desk, d1[0] to read and fd1[1] to write
 int *fd2; // Desk to master
+char *request;
 
 #endif // THREADBANK_H
