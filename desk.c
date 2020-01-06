@@ -155,22 +155,21 @@ void desk(int j, int fd1[], int fd2[]) {
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
     while(1) { // Get task from master thread and handle the queue
-        //printf("check local flag\n");
+        printf("check local flag\n");
         if (*flag == 1) {
-            printf("check1\n");
+            printf("flag == 1\n");
             if (flag_local == 0) {
+                printf("check2 # %d\n", j+1);
                 write(fd2[2*j+WRITE], &data, sizeof(struct Data));
                 flag_local = 1;
             }
         }
         else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread checker before continuing
-            printf("check\n");
             if (flag_local == 1) { flag_local = 0; }
             //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
             //    read_buffer[strlen(read_buffer) - 1] = '\0';
             //    printf("Read buffer: %s of %d\n", read_buffer, j);
             //}
-            printf("check\n");
             data.readbuffer = read_buffer;
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
             pthread_create(&thread_id, NULL, handlerequest, (void*)&data);

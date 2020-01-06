@@ -17,6 +17,7 @@
 #define WRITE 1
 
 void sig_handler(int signo);
+void master_desk(void);
 int main(int argc, char *argv[]);
 
 
@@ -26,5 +27,7 @@ int n; // Number of desks
 int *fd1; // Master to desk, d1[0] to read and fd1[1] to write
 int *fd2; // Desk to master
 char *request;
+pid_t pid_p;
+int i;
 
 #endif // THREADBANK_H

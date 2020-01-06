@@ -3,28 +3,52 @@
 
  // Signal handler
 void sig_handler(int signo) {
-    if (signo == SIGINT) { // CTRL+C
-        printf("\nControl+C pressed, exiting the program.\n");
-        free(fd1); free(fd2); free(request); // Free the allocated variables
-        //exec("rm *.bank"); // run rm *.bank
-        if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
-            perror("munmap failed with error: ");
+    if (signo == SIGINT){// CTRL+C to abort the program
+        if (pid_p == getpid()) { // Parent process
+            printf("\nControl+C pressed, exiting the program.\n");
+            free(fd1); free(fd2); free(request); // Free the allocated variables
+            //exec("rm *.bank"); // run rm *.bank
+            if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
+                perror("munmap of queuer_arr failed with error: ");
+            }
+            if (munmap(flag, sizeof(int)*n) == -1) { // Remove mapped array
+                perror("munmap flag failed with error: ");
+            }
+            char cmd[10] = {"rm *.bank"}; // Define command to remove all bank notes
+            system(cmd); // Remove all bank notes
+            kill(0,SIGTERM); // Terminate main program
+            exit(EXIT_SUCCESS);
         }
-        char cmd[10] = {"rm *.bank"}; // Define command to remove all bank notes
-        system(cmd); // Remove all bank notes
-        kill(0,SIGTERM); // Terminate main program
-        exit(EXIT_FAILURE);
+        else {
+            fprintf(stdout, "Desk # %d closing.\n", i+1);
+            exit(EXIT_SUCCESS);
+        }
     }
-    else if (signo == SIGINFO) { // CTRL+T, master desk signal
+    else if (signo == SIGINFO && pid_p == getpid()) { // CTRL+T, master desk signal
         *flag = 1; // Raise the global flag
         printf("CTRL+T pressed, waiting for all desks to report to the master.\n");
         int deposit_master, withdraw_master = 0;
         for (int i = 0; i < n; i++) {
             char read_buffer[SIZE];
-            while (read(fd2[2*i+READ], read_buffer, SIZE) > 0) {
-                printf("%s\n", read_buffer);
+            while (read(fd2[2*i+READ], read_buffer, SIZE) <= 0) { // > --> <=
+                printf("%s from # %d\n", read_buffer, i+1);
             }
-            fprintf(stdout, "Got reading from desk %d\n", i);
+            fprintf(stdout, "Got reading from desk %d\n", i+1);
+            flag = 0;
+            master_desk();
+        }
+    }
+}
+
+void master_desk(void) {
+    int s; // Shortest line helping variable
+
+    while(1){ //signal(SIGINT, sig_handler) != SIG_ERR || signal(SIGINFO, sig_handler) != SIG_ERR) {
+        if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) {
+            request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
+            s = shortestline(); // Get the desk with shortest line
+            queue_arr[s]++; // Increase the queue of desk s by one
+            write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
         }
     }
 }
@@ -34,7 +58,7 @@ int main(int argc, char *argv[]) {
     memset(&act, 0, sizeof(act)); // Set signal handler value as zero
     act.sa_handler = sig_handler;
 
-    sigaction(SIGINT,  &act, 0); // Initialize SIGINT handler
+    sigaction(SIGINT,  &act, NULL); // Initialize SIGINT handler
 
     if (!argv[1]) {
         printf("Desk number required as variable. Exiting.\n");
@@ -62,10 +86,11 @@ int main(int argc, char *argv[]) {
     fd2 = malloc(2*n*sizeof(fd2)); // Desk to master
     printf("check1\n");
 
-    for (int i = 0; i < n; i++) { // Create all processes and open pipes
+    for (i = 0; i < n; i++) { // Create all processes and open pipes
         ((int*)queue_arr)[i] = 0; // Is it needed as calloc initializes as zero?
         if (pipe(fd1 + 2*i) == -1) { fprintf(stderr, "Pipe 1 Failed\n"); } // Open pipe fd1
         if (pipe(fd2 + 2*i) == -1) { fprintf(stderr, "Pipe 2 Failed\n"); } // Open pipe fd2
+        pid_p = getpid(); // Get parent PID
         pid_c = fork(); // Fork process
         if (pid_c < 0) { printf("Fork failed.\n"); }
         else if (pid_c == 0) { // Child process
@@ -74,7 +99,7 @@ int main(int argc, char *argv[]) {
             desk(i, fd1, fd2); // Child becomes the counter - passing the number of desk and pipes
         }
         else { // Parent process
-            sigaction(SIGINFO,  &act, 0); // Initialized SIGINFO handler on the master thread for requesting deposits/withdrawals
+            sigaction(SIGINFO,  &act, NULL); // Initialized SIGINFO handler on the master thread for requesting deposits/withdrawals
             close(fd1[2*i+READ]); // Close reading end of fd1
             close(fd2[2*i+WRITE]); // Close writing end of fd2
         }
@@ -85,6 +110,7 @@ int main(int argc, char *argv[]) {
     request = malloc(INPUT_SIZE); // Initialize request
     if (request == NULL) { printf("No memory.\n"); }
 
+    /*
     int s;
 
     while(signal(SIGINT, sig_handler) != SIG_ERR || signal(SIGINFO, sig_handler) != SIG_ERR) {
@@ -95,4 +121,6 @@ int main(int argc, char *argv[]) {
             write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
         }
     }
+    */
+   master_desk();
 }
