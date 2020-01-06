@@ -29,5 +29,7 @@ int *fd2; // Desk to master
 char *request;
 pid_t pid_p;
 int i;
+int deposit_master;
+int withdraw_master;
 
 #endif // THREADBANK_H

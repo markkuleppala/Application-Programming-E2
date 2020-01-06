@@ -20,23 +20,24 @@ void sig_handler(int signo) {
             exit(EXIT_SUCCESS);
         }
         else {
-            fprintf(stdout, "Desk # %d closing.\n", i+1);
+            fprintf(stdout, "\nDesk # %d closing.\n", i+1);
             exit(EXIT_SUCCESS);
         }
     }
     else if (signo == SIGINFO && pid_p == getpid()) { // CTRL+T, master desk signal
         *flag = 1; // Raise the global flag
         printf("CTRL+T pressed, waiting for all desks to report to the master.\n");
-        int deposit_master, withdraw_master = 0;
         for (int i = 0; i < n; i++) {
-            char read_buffer[SIZE];
-            while (read(fd2[2*i+READ], read_buffer, SIZE) <= 0) { // > --> <=
-                printf("%s from # %d\n", read_buffer, i+1);
+            int arr[SIZE];
+            while (read(fd2[2*i+READ], arr, sizeof(arr)) <= 0) {
             }
-            fprintf(stdout, "Got reading from desk %d\n", i+1);
-            flag = 0;
-            master_desk();
+            fprintf(stdout, "d: %d w: %d from # %d\n", arr[0], arr[1], i+1);
+            deposit_master += arr[0];
+            withdraw_master += arr[1];
+            flag = 0;   
         }
+        printf("All desk read. Deposits %d, withdraws %d\n", deposit_master, withdraw_master);
+        master_desk();
     }
 }
 
@@ -55,6 +56,8 @@ void master_desk(void) {
 
 int main(int argc, char *argv[]) {
     struct sigaction act; // Initialize signal-handler
+    deposit_master = 0;
+    withdraw_master = 0;
     memset(&act, 0, sizeof(act)); // Set signal handler value as zero
     act.sa_handler = sig_handler;
 
@@ -76,27 +79,29 @@ int main(int argc, char *argv[]) {
     }
 
     flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    //*flag = 0;
     if (flag == MAP_FAILED) {
         perror("Error mmapping the flag: ");
         exit(EXIT_FAILURE);
     }
-    //if (!queue_arr) { printf("Allocating memory failed. Exiting.\n"); exit(1); }
+
+    *flag = 0;
+
     fd1 = malloc(2*n*sizeof(fd1)); // Master to desk, d1[0] to read and fd1[1] to write
     fd2 = malloc(2*n*sizeof(fd2)); // Desk to master
-    printf("check1\n");
 
     for (i = 0; i < n; i++) { // Create all processes and open pipes
         ((int*)queue_arr)[i] = 0; // Is it needed as calloc initializes as zero?
         if (pipe(fd1 + 2*i) == -1) { fprintf(stderr, "Pipe 1 Failed\n"); } // Open pipe fd1
         if (pipe(fd2 + 2*i) == -1) { fprintf(stderr, "Pipe 2 Failed\n"); } // Open pipe fd2
+        if (fcntl(*fd1, F_SETFL, O_NONBLOCK) == -1) { fprintf(stderr, "Setting fd1 to non-blocking failed\n"); } // Set fd1 to non-blocking
+        if (fcntl(*fd2, F_SETFL, O_NONBLOCK) == -1) { fprintf(stderr, "Setting fd2 to non-blocking failed\n"); } // Set fd2 to non-blocking
         pid_p = getpid(); // Get parent PID
         pid_c = fork(); // Fork process
         if (pid_c < 0) { printf("Fork failed.\n"); }
         else if (pid_c == 0) { // Child process
-            close(fd1[2*i+WRITE]); // Close writing end of fd1
-            close(fd2[2*i+READ]); // Close reading end of fd2
-            desk(i, fd1, fd2); // Child becomes the counter - passing the number of desk and pipes
+            //close(fd1[2*i+WRITE]); // Close writing end of fd1
+            //close(fd2[2*i+READ]); // Close reading end of fd2
+            desk(i, fd1, fd2, flag); // Child becomes the counter - passing the number of desk and pipes
         }
         else { // Parent process
             sigaction(SIGINFO,  &act, NULL); // Initialized SIGINFO handler on the master thread for requesting deposits/withdrawals

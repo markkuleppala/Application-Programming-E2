@@ -36,7 +36,7 @@ void write_balance(char *account, double *value) {
 
 double balance(char *number) {
     double balance = getlastline(number);
-    printf("Balance of %s is: %.2f.\n", number, balance);
+    printf("Balance of %s: %.2f.\n", number, balance);
     return balance;
 }
 
@@ -44,6 +44,7 @@ double deposit(char *account, char *value) {
 
     // Write lock
     double new_balance = getlastline(account) + atof(value);
+    printf("Deposit balance in %s: %.2f\n", account, new_balance);
     write_balance(account, &new_balance);
     // Write lock away
     return new_balance;
@@ -55,7 +56,7 @@ int withdraw(char *account, char *value) {
 
     double balance = getlastline(account);
     if (balance >= atof(value)) {
-        printf("Withdraw balance in %s is %.2f\n", account, balance);
+        printf("Withdraw balance in %s: %.2f\n", account, balance);
         double new_balance = balance - atoi(value);
         // Write new balance to file
         write_balance(account, &new_balance);
@@ -148,23 +149,24 @@ void *handlerequest(void *data) {
     return NULL;
 }
 
-void desk(int j, int fd1[], int fd2[]) {
+void desk(int j, int *fd1, int *fd2, int *flag) {
+    close(fd1[2*j+WRITE]); // Close writing end of fd1
+    close(fd2[2*j+READ]); // Close reading end of fd2
     pthread_t thread_id;
     int flag_local = 0;
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
+    //struct Data data_out; // Initializing data structure for passing deposit/withdrawal to master process
     while(1) { // Get task from master thread and handle the queue
-        printf("check local flag\n");
         if (*flag == 1) {
-            printf("flag == 1\n");
             if (flag_local == 0) {
-                printf("check2 # %d\n", j+1);
-                write(fd2[2*j+WRITE], &data, sizeof(struct Data));
+                int arr[] = {deposit_count, withdraw_count};
+                write(fd2[2*j+WRITE], arr, sizeof(arr));
                 flag_local = 1;
             }
         }
-        else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe - Add here the global master thread checker before continuing
+        else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
             if (flag_local == 1) { flag_local = 0; }
             //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
             //    read_buffer[strlen(read_buffer) - 1] = '\0';
@@ -176,6 +178,7 @@ void desk(int j, int fd1[], int fd2[]) {
             pthread_join(thread_id, NULL); // Waiting for the return of the task
             deposit_count += data.d;
             withdraw_count += data.w;
+
             //printf("queue length in %d: %d\n", j, queue_arr[j]);
             queue_arr[j]--; // Decrement the queue length
             //printf("queue length in %d: %d\n", j, queue_arr[j]);

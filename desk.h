@@ -23,7 +23,7 @@ double transfer(char *account1, char *account2, char *value);
 int shortestline(void); // Should this be in threadbank.h?
 struct Data;
 void *handlerequest(void *data);
-void desk(int j, int fd1[], int fd2[]);
+void desk(int j, int *fd1, int *fd2, int *flag);
 
 
 //int *queue_arr; // Desk specific queues
