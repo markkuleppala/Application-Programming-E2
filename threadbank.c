@@ -34,10 +34,10 @@ void sig_handler(int signo) {
             fprintf(stdout, "d: %d w: %d from # %d\n", arr[0], arr[1], i+1);
             deposit_master += arr[0];
             withdraw_master += arr[1];
-            flag = 0;   
+            *flag = 0;
         }
-        printf("All desk read. Deposits %d, withdraws %d\n", deposit_master, withdraw_master);
-        master_desk();
+        printf("All desks reported back. Deposits %d, withdraws %d.\n", deposit_master, withdraw_master);
+        //master_desk();
     }
 }
 

@@ -5,3 +5,5 @@ Use of exec
 Account R/W locks
 Halt all desks until d/w is reported for all desks
 Spawn request handler with execv only when transferring/depositing/withdrawing
+Check if action successful before printing
+Wrong sum of deposits returned after halting

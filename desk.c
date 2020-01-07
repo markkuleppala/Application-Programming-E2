@@ -43,11 +43,14 @@ double balance(char *number) {
 double deposit(char *account, char *value) {
 
     // Write lock
-    double new_balance = getlastline(account) + atof(value);
-    printf("Deposit balance in %s: %.2f\n", account, new_balance);
-    write_balance(account, &new_balance);
-    // Write lock away
-    return new_balance;
+    if (atof(value) >= 0) {
+        double new_balance = getlastline(account) + atof(value);
+        printf("Deposit balance in %s: %.2f\n", account, new_balance);
+        write_balance(account, &new_balance);
+        // Write lock away
+        return new_balance;
+    }
+    else return -1;
 }
 
 int withdraw(char *account, char *value) {
@@ -56,8 +59,8 @@ int withdraw(char *account, char *value) {
 
     double balance = getlastline(account);
     if (balance >= atof(value)) {
-        printf("Withdraw balance in %s: %.2f\n", account, balance);
         double new_balance = balance - atoi(value);
+        printf("Withdraw balance in %s: %.2f\n", account, new_balance);
         // Write new balance to file
         write_balance(account, &new_balance);
     }
@@ -139,8 +142,8 @@ void *handlerequest(void *data) {
         }
     }
     else if (strcmp(action[0], "t") == 0) { // t - transfer
-        if (transfer(action[1], action[2], action[3])) {
-            printf("transfer from %s to %s of %s\n", action[1], action[2], action[3]);
+        if (transfer(action[1], action[2], action[3]) == 1) {
+            printf("Transfered %s from %s to %s\n", action[3], action[1], action[2]); // Do not print this is action not successful
         }
     }
     else { // Unknown request
