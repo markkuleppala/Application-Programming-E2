@@ -4,7 +4,7 @@
 #include <stdio.h> /* scanf, printf, fgets */
 #include <string.h> /* strtok */
 #include <stdlib.h>  /* atof */
-#include <pthread.h> /* pthread_create */
+#include <pthread.h> /* pthread_create, phthread_mutex_* */
 #include <math.h> /* log10, abs, floor */
 #include <fcntl.h> /* fcntl */
 #include <signal.h> /* signal */
@@ -23,8 +23,9 @@ double transfer(char *account1, char *account2, char *value);
 int shortestline(void); // Should this be in threadbank.h?
 struct Data;
 void *handlerequest(void *data);
-void *desk(void *arg);//, int *fd1, int *fd2, int *flag);
-
+void desk(int j, int *fd1, int *fd2, int *flag);
+pthread_mutex_t lock;
+pid_t pid_logger;
 
 //int *queue_arr; // Desk specific queues
 //int flag = 0; // Flag for reporting the withdrawals and deposits

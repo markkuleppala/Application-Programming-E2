@@ -8,7 +8,12 @@ double getlastline(char *account) { // Get balance - Check that file exists, if 
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
     FILE *f;
     if (access(account_name, F_OK) == -1) { // File doesn't exist
-        printf("Creating a new account.\n");
+        //printf("Creating a new account.\n");
+        char init[1024];
+        sprintf(init, "Creating a new account %s\n", account);
+        pid_logger = fork();
+        if (pid_logger < 0) { perror("Fork failed"); }
+        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process
         f = fopen(account_name, "a");
         fprintf(f, "%.2f", balance);
     }
@@ -110,6 +115,7 @@ struct Data {
 };
 
 void *handlerequest(void *data) {
+    pthread_mutex_lock(&lock);
     char *ptr = strtok(((struct Data *)data)->readbuffer, " ");
     int i_max;
     if (strcmp(ptr, "l") == 0) { i_max = 2; }
@@ -123,6 +129,7 @@ void *handlerequest(void *data) {
         }
         else {
             fprintf(stderr, "Invalid request!\n");
+            pthread_mutex_unlock(&lock);
             return NULL;
         }
     }
@@ -149,33 +156,34 @@ void *handlerequest(void *data) {
     else { // Unknown request
         printf("Invalid request!\n");
     }
+    pthread_mutex_unlock(&lock);
     return NULL;
 }
 
-void *desk(void *arg) {//, int *fd1, int *fd2, int *flag) {
-//    close(fd1[2*j+WRITE]); // Close writing end of fd1
-//    close(fd2[2*j+READ]); // Close reading end of fd2
+void desk(int j, int *fd1, int *fd2, int *flag) {
+    close(fd1[2*j+WRITE]); // Close writing end of fd1
+    close(fd2[2*j+READ]); // Close reading end of fd2
     pthread_t thread_id;
-    //int j = (int)arg;
-    int *j = arg;
-    //int j = 0;
     int flag_local = 0;
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
     //struct Data data_out; // Initializing data structure for passing deposit/withdrawal to master process
+    
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+        perror("mutex init failed\n");
+    }
+    
+    
     while(1) { // Get task from master thread and handle the queue
         if (*flag == 1) {
             if (flag_local == 0) {
                 int arr[] = {deposit_count, withdraw_count};
-                write(fd2[(2 * *j)+WRITE], arr, sizeof(arr));
+                write(fd2[2*j+WRITE], arr, sizeof(arr));
                 flag_local = 1;
             }
         }
-        else if (*flag == 0 && read(fd1[(2 * *j)+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
-            read_buffer[strlen(read_buffer) - 1] = '\0';
-            //printf("read buffer length: %lu\n", strlen(read_buffer));
-            //printf("---%s---\n", read_buffer);
+        else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
             if (flag_local == 1) { flag_local = 0; }
             //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
             //    read_buffer[strlen(read_buffer) - 1] = '\0';
@@ -189,7 +197,7 @@ void *desk(void *arg) {//, int *fd1, int *fd2, int *flag) {
             withdraw_count += data.w;
 
             //printf("queue length in %d: %d\n", j, queue_arr[j]);
-            queue_arr[*j]--; // Decrement the queue length
+            queue_arr[j]--; // Decrement the queue length
             //printf("queue length in %d: %d\n", j, queue_arr[j]);
         }
     }
