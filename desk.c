@@ -152,10 +152,13 @@ void *handlerequest(void *data) {
     return NULL;
 }
 
-void desk(int j, int *fd1, int *fd2, int *flag) {
-    close(fd1[2*j+WRITE]); // Close writing end of fd1
-    close(fd2[2*j+READ]); // Close reading end of fd2
+void *desk(void *arg) {//, int *fd1, int *fd2, int *flag) {
+//    close(fd1[2*j+WRITE]); // Close writing end of fd1
+//    close(fd2[2*j+READ]); // Close reading end of fd2
     pthread_t thread_id;
+    //int j = (int)arg;
+    int *j = arg;
+    //int j = 0;
     int flag_local = 0;
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
@@ -165,11 +168,14 @@ void desk(int j, int *fd1, int *fd2, int *flag) {
         if (*flag == 1) {
             if (flag_local == 0) {
                 int arr[] = {deposit_count, withdraw_count};
-                write(fd2[2*j+WRITE], arr, sizeof(arr));
+                write(fd2[(2 * *j)+WRITE], arr, sizeof(arr));
                 flag_local = 1;
             }
         }
-        else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
+        else if (*flag == 0 && read(fd1[(2 * *j)+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
+            read_buffer[strlen(read_buffer) - 1] = '\0';
+            //printf("read buffer length: %lu\n", strlen(read_buffer));
+            //printf("---%s---\n", read_buffer);
             if (flag_local == 1) { flag_local = 0; }
             //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
             //    read_buffer[strlen(read_buffer) - 1] = '\0';
@@ -183,7 +189,7 @@ void desk(int j, int *fd1, int *fd2, int *flag) {
             withdraw_count += data.w;
 
             //printf("queue length in %d: %d\n", j, queue_arr[j]);
-            queue_arr[j]--; // Decrement the queue length
+            queue_arr[*j]--; // Decrement the queue length
             //printf("queue length in %d: %d\n", j, queue_arr[j]);
         }
     }

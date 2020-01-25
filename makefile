@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS  = -Wall -pedantic#-lpthread
+CFLAGS  = -Wall -pedantic #-lpthread
 DEPS = threadbank.h desk.h
 OBJ = threadbank.o desk.o
 
@@ -11,7 +11,7 @@ all: threadbank lock clean
 
 # Compile threadbank executable
 threadbank: $(OBJ)
-	$(CC) -o threadbank threadbank.o desk.o
+	$(CC) -o threadbank threadbank.o desk.o -pthread
 
 # Compile file lock executable
 lock:  lock.c

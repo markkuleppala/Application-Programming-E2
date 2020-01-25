@@ -4,7 +4,7 @@
 #include <stdio.h> /* scanf, printf, fgets */
 #include <string.h> /* strtok, memset */
 #include <stdlib.h>  /* atof */
-#include <pthread.h> /* pthread_create */
+#include <pthread.h> /* pthread_create, pthread_mutex_* */
 #include <math.h> /* log10, abs, floor */
 #include <fcntl.h> /* fcntl */
 #include <signal.h> /* signal, sigaction */
@@ -31,5 +31,6 @@ pid_t pid_p;
 int i;
 int deposit_master;
 int withdraw_master;
+pthread_mutex_t lock;
 
 #endif // THREADBANK_H
