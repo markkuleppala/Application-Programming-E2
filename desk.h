@@ -32,4 +32,6 @@ pid_t pid_logger;
 int n; // Number of desks
 char read_buffer[SIZE];
 
+
+
 #endif // DESK_H

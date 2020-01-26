@@ -2,31 +2,32 @@
 #include "threadbank.h"
 
 double getlastline(char *account) { // Get balance - Check that file exists, if not, create an empty one
-    char tmp[1024];
-    double balance = 0;
+    double balance = 0; // Initialize open balance
     char *account_name = malloc(sizeof(char)*strlen(account)+6); // Allocating array
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
-    FILE *f;
-    if (access(account_name, F_OK) == -1) { // File doesn't exist
+    FILE *f; // Initilize file descriptor
+
+    if (access(account_name, F_OK) == -1) { // Account file doesn't exist
         //printf("Creating a new account.\n");
-        char init[1024];
-        sprintf(init, "Creating a new account %s\n", account);
-        pid_logger = fork();
-        if (pid_logger < 0) { perror("Fork failed"); }
-        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process
-        f = fopen(account_name, "a");
-        fprintf(f, "%.2f", balance);
+        char init[1024]; // Initilize helper char array
+        sprintf(init, "Creating a new account # %s\n", account); // Initilize text string to log creation of new account
+        pid_logger = fork(); // Fork the process
+        if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
+        f = fopen(account_name, "a"); // Parent process, create file *.bank
+        fprintf(f, "%.2f", balance); // Write initializing balance to the file *.bank
     }
-    else {
-        f = fopen(account_name, "r");
-        while (!feof(f)) {
+    else { // Account file exists
+        f = fopen(account_name, "r"); // Open existing account file
+        char tmp[1024]; // Initialize helper char array
+        while (!feof(f)) { // Find the last line
             fgets(tmp, 1024, f);
         }
-        balance = atof(tmp);
+        balance = atof(tmp); // Read the balance
     }
-    fclose(f);
-    free(account_name);
-    return balance;
+    fclose(f); // Close the filehandler
+    free(account_name); // Free the allocated filename
+    return balance; // Return the latest balance
 }
 
 void write_balance(char *account, double *value) {
@@ -34,8 +35,15 @@ void write_balance(char *account, double *value) {
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
     FILE *f = fopen(account_name, "ab+");
     fprintf(f, "\n%.2f", *value);
-    //printf("writing to %s value %.2f\n", account_name, *value);
     fclose(f);
+
+    char init[1024]; // Initilize helper char array
+    sprintf(init, "Updating balance to %.2f in account # %s\n", *value, account); // Initilize text string to log creation of new account
+    pid_logger = fork(); // Fork the process
+    if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+    else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
+
+    //printf("writing to %s value %.2f\n", account_name, *value)
     free(account_name);
 }
 
@@ -53,6 +61,13 @@ double deposit(char *account, char *value) {
         printf("Deposit balance in %s: %.2f\n", account, new_balance);
         write_balance(account, &new_balance);
         // Write lock away
+
+        char init[1024]; // Initilize helper char array
+        sprintf(init, "Depositing %.2f to account # %s\n", atof(value), account); // Initilize text string to log creation of new account
+        pid_logger = fork(); // Fork the process
+        if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
+        
         return new_balance;
     }
     else return -1;
@@ -68,12 +83,20 @@ int withdraw(char *account, char *value) {
         printf("Withdraw balance in %s: %.2f\n", account, new_balance);
         // Write new balance to file
         write_balance(account, &new_balance);
+        // Write lock away, use exec
+
+        char init[1024]; // Initilize helper char array
+        sprintf(init, "Withdrawing %.2f from account # %s\n", atof(value), account); // Initilize text string to log creation of new account
+        pid_logger = fork(); // Fork the process
+        if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
+
     }
     else {
         printf("Insufficient value on the account.\n");
         return -1;
     }
-    // Write lock away, use exec
+    
     return 1;
 }
 
@@ -83,6 +106,12 @@ double transfer(char *account1, char *account2, char *value) {
     if (balance1 >= atoi(value)) {
         withdraw(account1, value);
         deposit(account2, value);
+
+        char init[1024]; // Initilize helper char array
+        sprintf(init, "Transferring %.2f from account # %s to # %s\n", atof(value), account1, account2); // Initilize text string to log creation of new account
+        pid_logger = fork(); // Fork the process
+        if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+        else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
     }
     else {
         printf("Insufficient value on the account.\n");

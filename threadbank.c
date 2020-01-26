@@ -74,6 +74,12 @@ int main(int argc, char *argv[]) {
     printf("Welcome to ThreadBank manager!\n");
     pid_t pid_c = 0; // PID child
 
+    char init[1024]; // Initilize helper char array
+    sprintf(init, "Opened the Threadbank with %d desk(s)\n\n", n); // Initilize text string to log creation of new account
+    pid_logger = fork(); // Fork the process
+    if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
+    else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
+
     queue_arr = (int *)mmap(NULL, sizeof(int)*n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (queue_arr == MAP_FAILED) {
         perror("Error mmapping the queue: ");
