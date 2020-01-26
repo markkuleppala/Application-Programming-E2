@@ -7,7 +7,6 @@ void sig_handler(int signo) {
         if (pid_p == getpid()) { // Parent process
             printf("\nControl+C pressed, exiting the program.\n");
             free(fd1); free(fd2); free(request); // Free the allocated variables
-            //exec("rm *.bank"); // run rm *.bank
             if (munmap(queue_arr, sizeof(int)*n) == -1) { // Remove mapped array
                 perror("munmap of queuer_arr failed with error: ");
             }
@@ -39,7 +38,6 @@ void sig_handler(int signo) {
             *flag = 0;
         }
         printf("All desks reported back. Deposits %d, withdraws %d.\n", deposit_master, withdraw_master);
-        //master_desk();
     }
 }
 
@@ -107,8 +105,6 @@ int main(int argc, char *argv[]) {
         pid_c = fork(); // Fork process
         if (pid_c < 0) { printf("Fork failed.\n"); }
         else if (pid_c == 0) { // Child process
-            //close(fd1[2*i+WRITE]); // Close writing end of fd1
-            //close(fd2[2*i+READ]); // Close reading end of fd2
             desk(i, fd1, fd2, flag); // Child becomes the counter - passing the number of desk and pipes
         }
         else { // Parent process
@@ -123,17 +119,5 @@ int main(int argc, char *argv[]) {
     request = malloc(INPUT_SIZE); // Initialize request
     if (request == NULL) { printf("No memory.\n"); }
 
-    /*
-    int s;
-
-    while(signal(SIGINT, sig_handler) != SIG_ERR || signal(SIGINFO, sig_handler) != SIG_ERR) {
-        if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) {
-            request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
-            s = shortestline(); // Get the desk with shortest line
-            queue_arr[s]++;
-            write(fd1[2*s+WRITE], request, strlen(request)+1); // Write request to pipe, include NUL byte
-        }
-    }
-    */
    master_desk();
 }

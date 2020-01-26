@@ -8,7 +8,6 @@ double getlastline(char *account) { // Get balance - Check that file exists, if 
     FILE *f; // Initilize file descriptor
 
     if (access(account_name, F_OK) == -1) { // Account file doesn't exist
-        //printf("Creating a new account.\n");
         char init[1024]; // Initilize helper char array
         sprintf(init, "Creating a new account # %s\n", account); // Initilize text string to log creation of new account
         pid_logger = fork(); // Fork the process
@@ -43,7 +42,6 @@ void write_balance(char *account, double *value) {
     if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
     else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
 
-    //printf("writing to %s value %.2f\n", account_name, *value)
     free(account_name);
 }
 
@@ -136,13 +134,6 @@ int shortestline(void) {
     return location;
 }
 
-// Data helper struct for desk-specific deposit and withdrawal
-struct Data {
-    char *readbuffer;
-    int d;
-    int w;
-};
-
 void *handlerequest(void *data) {
     pthread_mutex_lock(&lock);
     char *ptr = strtok(((struct Data *)data)->readbuffer, " ");
@@ -197,7 +188,6 @@ void desk(int j, int *fd1, int *fd2, int *flag) {
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
-    //struct Data data_out; // Initializing data structure for passing deposit/withdrawal to master process
     
     if (pthread_mutex_init(&lock, NULL) != 0) {
         perror("mutex init failed\n");
@@ -214,20 +204,13 @@ void desk(int j, int *fd1, int *fd2, int *flag) {
         }
         else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
             if (flag_local == 1) { flag_local = 0; }
-            //if ((strlen(read_buffer) > 0) && (read_buffer[strlen(read_buffer) - 1] == '\n')) { // What's this for?
-            //    read_buffer[strlen(read_buffer) - 1] = '\0';
-            //    printf("Read buffer: %s of %d\n", read_buffer, j);
-            //}
             data.readbuffer = read_buffer;
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
             pthread_create(&thread_id, NULL, handlerequest, (void*)&data);
             pthread_join(thread_id, NULL); // Waiting for the return of the task
             deposit_count += data.d;
             withdraw_count += data.w;
-
-            //printf("queue length in %d: %d\n", j, queue_arr[j]);
             queue_arr[j]--; // Decrement the queue length
-            //printf("queue length in %d: %d\n", j, queue_arr[j]);
         }
     }
 }

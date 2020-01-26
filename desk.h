@@ -21,16 +21,21 @@ double deposit(char *account, char *value);
 int withdraw(char *account, char *value);
 double transfer(char *account1, char *account2, char *value);
 int shortestline(void); // Should this be in threadbank.h?
-struct Data;
 void *handlerequest(void *data);
 void desk(int j, int *fd1, int *fd2, int *flag);
-pthread_mutex_t lock;
-pid_t pid_logger;
 
-//int *queue_arr; // Desk specific queues
-//int flag = 0; // Flag for reporting the withdrawals and deposits
+
+
+
+struct Data { // Data helper struct for desk-specific deposit and withdrawal
+    char *readbuffer;
+    int d;
+    int w;
+};
 int n; // Number of desks
 char read_buffer[SIZE];
+pthread_mutex_t lock;
+pid_t pid_logger;
 
 
 

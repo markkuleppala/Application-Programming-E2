@@ -20,7 +20,6 @@ void sig_handler(int signo);
 void master_desk(void);
 int main(int argc, char *argv[]);
 
-
 int *queue_arr; // Desk specific queues
 int *flag; // Flag for reporting the withdrawals and deposits
 int n; // Number of desks
