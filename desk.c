@@ -8,7 +8,7 @@ double getlastline(char *account) { // Get balance - Check that file exists, if 
     FILE *f; // Initilize file descriptor
 
     if (access(account_name, F_OK) == -1) { // Account file doesn't exist
-        char init[1024]; // Initilize helper char array
+        char init[SIZE]; // Initilize helper char array
         sprintf(init, "Creating a new account # %s\n", account); // Initilize text string to log creation of new account
         pid_logger = fork(); // Fork the process
         if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
@@ -18,9 +18,9 @@ double getlastline(char *account) { // Get balance - Check that file exists, if 
     }
     else { // Account file exists
         f = fopen(account_name, "r"); // Open existing account file
-        char tmp[1024]; // Initialize helper char array
+        char tmp[SIZE]; // Initialize helper char array
         while (!feof(f)) { // Find the last line
-            fgets(tmp, 1024, f);
+            fgets(tmp, SIZE, f);
         }
         balance = atof(tmp); // Read the balance
     }
@@ -36,7 +36,7 @@ void write_balance(char *account, double *value) {
     fprintf(f, "\n%.2f", *value);
     fclose(f);
 
-    char init[1024]; // Initilize helper char array
+    char init[SIZE]; // Initilize helper char array
     sprintf(init, "Updating balance to %.2f in account # %s\n", *value, account); // Initilize text string to log creation of new account
     pid_logger = fork(); // Fork the process
     if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
@@ -60,7 +60,7 @@ double deposit(char *account, char *value) {
         write_balance(account, &new_balance);
         // Write lock away
 
-        char init[1024]; // Initilize helper char array
+        char init[SIZE]; // Initilize helper char array
         sprintf(init, "Depositing %.2f to account # %s\n", atof(value), account); // Initilize text string to log creation of new account
         pid_logger = fork(); // Fork the process
         if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
@@ -83,7 +83,7 @@ int withdraw(char *account, char *value) {
         write_balance(account, &new_balance);
         // Write lock away, use exec
 
-        char init[1024]; // Initilize helper char array
+        char init[SIZE]; // Initilize helper char array
         sprintf(init, "Withdrawing %.2f from account # %s\n", atof(value), account); // Initilize text string to log creation of new account
         pid_logger = fork(); // Fork the process
         if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
@@ -105,7 +105,7 @@ double transfer(char *account1, char *account2, char *value) {
         withdraw(account1, value);
         deposit(account2, value);
 
-        char init[1024]; // Initilize helper char array
+        char init[SIZE]; // Initilize helper char array
         sprintf(init, "Transferring %.2f from account # %s to # %s\n", atof(value), account1, account2); // Initilize text string to log creation of new account
         pid_logger = fork(); // Fork the process
         if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
@@ -135,7 +135,7 @@ int shortestline(void) {
 }
 
 void *handlerequest(void *data) { // Function for handling read requests
-    pthread_mutex_lock(&lock); // Initialize mutex lock
+    pthread_mutex_lock(&mutex_lock); // Initialize mutex lock
     char *ptr = strtok(((struct Data *)data)->readbuffer, " "); // Split request by whitespaces
     int i_max; // Initialize upper limit for the for loop
     if (strcmp(ptr, "l") == 0) { i_max = 2; } // Balance request
@@ -148,7 +148,7 @@ void *handlerequest(void *data) { // Function for handling read requests
         }
         else {
             fprintf(stderr, "Invalid request!\n");
-            pthread_mutex_unlock(&lock); // Unlock the mutex lock
+            pthread_mutex_unlock(&mutex_lock); // Unlock the mutex lock
             return NULL;
         }
     }
@@ -174,7 +174,7 @@ void *handlerequest(void *data) { // Function for handling read requests
     else { // Unknown request
         printf("Invalid request!\n");
     }
-    pthread_mutex_unlock(&lock); // Unlock the mutex lock
+    pthread_mutex_unlock(&mutex_lock); // Unlock the mutex lock
     return NULL;
 }
 
@@ -186,8 +186,7 @@ void desk(int j, int *fd1, int *fd2, int *flag) { // Desk function reading and h
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
-    
-    if (pthread_mutex_init(&lock, NULL) != 0) { perror("mutex init failed\n"); } // Invalid mutex lock initializing
+    if (pthread_mutex_init(&mutex_lock, NULL) != 0) { perror("mutex init failed\n"); } // Invalid mutex lock initializing
     
     while(1) { // Get task from master thread and handle the queue
         if (*flag == 1) { // CTRL+T has been pressed, report the withdrawals and deposits

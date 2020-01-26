@@ -10,8 +10,8 @@ all: threadbank logger clean
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 # Compile threadbank executable
-threadbank: $(OBJ)
-	$(CC) -o threadbank threadbank.o desk.o -lpthread
+threadbank: $(OBJ) lock.o
+	$(CC) -o threadbank threadbank.o desk.o lock.o -lpthread
 
 # Compile file lock executable
 #lock: lock.c

@@ -25,16 +25,16 @@ int main(int argc, char *argv[]) {
         fputs("Welcome to ThreadBank manager!\n", f);
         fclose(f);
     }
-    // exec write lock on LOG_FILE
+
     int fd = lock(LOG_FILE, 2);
     FILE *f = fopen(LOG_FILE, "a"); // Open file handler for the logfile
     if (!argv[0]) { // Check if the argument is empty
         perror("Invalid log");
     }
+
     char* time_now = timestamp(); // Get the timestamp
     fprintf(f, "%s: %s", time_now, argv[0]); // Write timestamp and log text to the logfile
     fclose(f); // Close the file handler
     unlock(fd);
-
-
+    //exit(EXIT_SUCCESS);
 }
