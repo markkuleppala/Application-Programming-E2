@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     pid_t pid_c = 0; // PID child
 
     char init[1024]; // Initilize helper char array
-    sprintf(init, "Opened the Threadbank with %d desk(s)\n\n", n); // Initilize text string to log creation of new account
+    sprintf(init, "Opened the Threadbank with %d desk(s)\n", n); // Initilize text string to log creation of new account
     pid_logger = fork(); // Fork the process
     if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
     else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log

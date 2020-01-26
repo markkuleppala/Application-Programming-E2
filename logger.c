@@ -1,4 +1,5 @@
 #include "logger.h"
+#include "lock.h"
 
 char* timestamp(void) { // Copied from https://en.wikipedia.org/wiki/C_date_and_time_functions
     current_time = time(NULL); // Obtain current time
@@ -18,14 +19,22 @@ char* timestamp(void) { // Copied from https://en.wikipedia.org/wiki/C_date_and_
 }
 
 int main(int argc, char *argv[]) {
+    if (access(LOG_FILE, F_OK) == -1) { // Log file doesn't exist
+        //printf("%s logfile\n", LOG_FILE);
+        FILE *f = fopen(LOG_FILE, "a");
+        fputs("Welcome to ThreadBank manager!\n", f);
+        fclose(f);
+    }
     // exec write lock on LOG_FILE
-    FILE *f = fopen(LOG_FILE, "a"); // Open filehandler for the logfile
+    int fd = lock(LOG_FILE, 2);
+    FILE *f = fopen(LOG_FILE, "a"); // Open file handler for the logfile
     if (!argv[0]) { // Check if the argument is empty
         perror("Invalid log");
     }
     char* time_now = timestamp(); // Get the timestamp
     fprintf(f, "%s: %s", time_now, argv[0]); // Write timestamp and log text to the logfile
     fclose(f); // Close the file handler
+    unlock(fd);
 
 
 }
