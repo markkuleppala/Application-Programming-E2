@@ -30,6 +30,5 @@ pid_t pid_p;
 int i;
 int deposit_master;
 int withdraw_master;
-pthread_mutex_t lock;
 
 #endif // THREADBANK_H

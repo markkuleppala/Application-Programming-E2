@@ -1,5 +1,6 @@
 #include "desk.h"
 #include "threadbank.h"
+#include "lock.h"
 
 double getlastline(char *account) { // Get balance - Check that file exists, if not, create an empty one
     double balance = 0; // Initialize open balance
@@ -53,12 +54,16 @@ double balance(char *number) {
 
 double deposit(char *account, char *value) {
 
-    // Write lock
+    char full_account[SIZE];
+    sprintf(full_account, "%s.bank", account);
+    int fd = lock(full_account, 2); // Write lock to account
+    
+
     if (atof(value) >= 0) {
         double new_balance = getlastline(account) + atof(value);
         printf("Deposit balance in %s: %.2f\n", account, new_balance);
         write_balance(account, &new_balance);
-        // Write lock away
+        unlock(fd);
 
         char init[SIZE]; // Initilize helper char array
         sprintf(init, "Depositing %.2f to account # %s\n", atof(value), account); // Initilize text string to log creation of new account
@@ -75,13 +80,17 @@ int withdraw(char *account, char *value) {
 
     // Write lock, use exec
 
+    char full_account[SIZE];
+    sprintf(full_account, "%s.bank", account);
+    int fd = lock(full_account, 2); // Write lock to account
+
     double balance = getlastline(account);
     if (balance >= atof(value)) {
         double new_balance = balance - atoi(value);
         printf("Withdraw balance in %s: %.2f\n", account, new_balance);
         // Write new balance to file
         write_balance(account, &new_balance);
-        // Write lock away, use exec
+        unlock(fd);
 
         char init[SIZE]; // Initilize helper char array
         sprintf(init, "Withdrawing %.2f from account # %s\n", atof(value), account); // Initilize text string to log creation of new account
@@ -99,7 +108,14 @@ int withdraw(char *account, char *value) {
 }
 
 double transfer(char *account1, char *account2, char *value) {
-    // Write locks (and read locks), use exec
+
+    char full_account1[SIZE];
+    char full_account2[SIZE];
+    sprintf(full_account1, "%s.bank", account1);
+    sprintf(full_account2, "%s.bank", account2);
+    int fd1 = lock(full_account1, 2); // Write lock to account1
+    int fd2 = lock(full_account2, 2); // Write lock to account1
+
     double balance1 = getlastline(account1);
     if (balance1 >= atoi(value)) {
         withdraw(account1, value);
@@ -113,9 +129,12 @@ double transfer(char *account1, char *account2, char *value) {
     }
     else {
         printf("Insufficient value on the account.\n");
+        unlock(fd1);
+        unlock(fd2);
         return -1;
     }
-    // Write locks away, use exec
+    unlock(fd1);
+    unlock(fd2);
     return 1;
 }
 
