@@ -33,9 +33,9 @@ double getlastline(char *account) { // Get balance - Check that file exists, if 
 void write_balance(char *account, double *value) {
     char *account_name = malloc(sizeof(char)*strlen(account)+6); // Allocating array
     sprintf(account_name, "%s.bank", account); // Writing id + .bank
-    FILE *f = fopen(account_name, "ab+");
-    fprintf(f, "\n%.2f", *value);
-    fclose(f);
+    FILE *f = fopen(account_name, "ab+"); // Open the account file
+    fprintf(f, "\n%.2f", *value); // Write in the new balance
+    fclose(f); // Close the file
 
     char init[SIZE]; // Initilize helper char array
     sprintf(init, "Updating balance to %.2f in account # %s\n", *value, account); // Initilize text string to log creation of new account
@@ -47,23 +47,20 @@ void write_balance(char *account, double *value) {
 }
 
 double balance(char *number) {
-    double balance = getlastline(number);
-    printf("Balance of %s: %.2f.\n", number, balance);
+    double balance = getlastline(number); // Get balance of account number
+    printf("Balance of %s: %.2f.\n", number, balance); // Print the balance
     return balance;
 }
 
 double deposit(char *account, char *value) {
-
-    char full_account[SIZE];
-    sprintf(full_account, "%s.bank", account);
+    char full_account[SIZE]; // Initialize full account name help array
+    sprintf(full_account, "%s.bank", account); // Write full account file name to array
     int fd = lock(full_account, 2); // Write lock to account
     
-
     if (atof(value) >= 0) {
-        double new_balance = getlastline(account) + atof(value);
-        printf("Deposit balance in %s: %.2f\n", account, new_balance);
-        write_balance(account, &new_balance);
-        unlock(fd);
+        double new_balance = getlastline(account) + atof(value); // Calculate new balance
+        write_balance(account, &new_balance); // Write new balance to account
+        unlock(fd); // Unlock account
 
         char init[SIZE]; // Initilize helper char array
         sprintf(init, "Depositing %.2f to account # %s\n", atof(value), account); // Initilize text string to log creation of new account
@@ -78,19 +75,15 @@ double deposit(char *account, char *value) {
 
 int withdraw(char *account, char *value) {
 
-    // Write lock, use exec
-
-    char full_account[SIZE];
-    sprintf(full_account, "%s.bank", account);
+    char full_account[SIZE]; // Initialize full account name help array
+    sprintf(full_account, "%s.bank", account); // Write full account file name to array
     int fd = lock(full_account, 2); // Write lock to account
 
-    double balance = getlastline(account);
-    if (balance >= atof(value)) {
-        double new_balance = balance - atoi(value);
-        printf("Withdraw balance in %s: %.2f\n", account, new_balance);
-        // Write new balance to file
-        write_balance(account, &new_balance);
-        unlock(fd);
+    double balance = getlastline(account); // Get the balance
+    if (balance >= atof(value)) { // Check that balance is more than requested sum
+        double new_balance = balance - atoi(value); // Calculate new balance
+        write_balance(account, &new_balance); // Write new balance to file
+        unlock(fd); // Unlock account
 
         char init[SIZE]; // Initilize helper char array
         sprintf(init, "Withdrawing %.2f from account # %s\n", atof(value), account); // Initilize text string to log creation of new account
@@ -109,17 +102,17 @@ int withdraw(char *account, char *value) {
 
 double transfer(char *account1, char *account2, char *value) {
 
-    char full_account1[SIZE];
-    char full_account2[SIZE];
-    sprintf(full_account1, "%s.bank", account1);
-    sprintf(full_account2, "%s.bank", account2);
+    char full_account1[SIZE]; // Initialize full account name help array
+    char full_account2[SIZE]; // Initialize full account name help array
+    sprintf(full_account1, "%s.bank", account1); // Write full account file name to array
+    sprintf(full_account2, "%s.bank", account2); // Write full account file name to array
     int fd1 = lock(full_account1, 2); // Write lock to account1
-    int fd2 = lock(full_account2, 2); // Write lock to account1
+    int fd2 = lock(full_account2, 2); // Write lock to account2
 
-    double balance1 = getlastline(account1);
-    if (balance1 >= atoi(value)) {
-        withdraw(account1, value);
-        deposit(account2, value);
+    double balance1 = getlastline(account1); // Get balance of account1
+    if (balance1 >= atoi(value)) { // Check that balance is more than the requested value
+        withdraw(account1, value); // Withdraw from account1
+        deposit(account2, value); // Deposity to account1
 
         char init[SIZE]; // Initilize helper char array
         sprintf(init, "Transferring %.2f from account # %s to # %s\n", atof(value), account1, account2); // Initilize text string to log creation of new account
@@ -129,28 +122,28 @@ double transfer(char *account1, char *account2, char *value) {
     }
     else {
         printf("Insufficient value on the account.\n");
-        unlock(fd1);
-        unlock(fd2);
+        unlock(fd1); // Unlock account1
+        unlock(fd2); // Unlock account2
         return -1;
     }
-    unlock(fd1);
-    unlock(fd2);
+    unlock(fd1); // Unlock account1
+    unlock(fd2); // Unlock account2
     return 1;
 }
 
-// Get the shortest line of the desks
-int shortestline(void) {
+
+int shortestline(void) { // Get the shortest line of the desks
     int i;
     int location = 0;
-    int min = queue_arr[0];
-    size_t s = sizeof(&queue_arr)/sizeof(queue_arr[0]);
-    for (i = 1; i < s; i++) {
+    int min = queue_arr[0]; // Minimum position help variable
+    size_t s = sizeof(&queue_arr)/sizeof(queue_arr[0]); // Length of the array
+    for (i = 1; i < s; i++) { // Find the array with least tasks in queue
         if (queue_arr[i] < min) {
             min = queue_arr[i];
             location = i;
         }
     }
-    return location;
+    return location; // Return the desk with shortest queue
 }
 
 void *handlerequest(void *data) { // Function for handling read requests

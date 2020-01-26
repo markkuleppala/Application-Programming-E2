@@ -20,7 +20,7 @@ void sig_handler(int signo) { // Signal handlers
             exit(EXIT_SUCCESS);
         }
         else {
-            fprintf(stdout, "\nDesk # %d closing.\n", i+1);
+            fprintf(stdout, "\nDesk # %d closing.\n", i+1); // Notify use about closing the desk
             exit(EXIT_SUCCESS);
         }
     }
