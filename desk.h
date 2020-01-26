@@ -29,11 +29,10 @@ struct Data { // Data helper struct for desk-specific deposit and withdrawal
     int d;
     int w;
 };
+
 int n; // Number of desks
 char read_buffer[SIZE]; // Read buffer array
 pthread_mutex_t mutex_lock; // Mutex help variable
 pid_t pid_logger; // Pid for logger
-
-
 
 #endif // DESK_H
