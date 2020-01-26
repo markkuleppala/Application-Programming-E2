@@ -19,4 +19,4 @@ logger: logger.c lock.o
 
 # Clean
 clean:
-	rm *.o
+	rm *.o || rm *.out

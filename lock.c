@@ -14,6 +14,8 @@ int lock(char *filename, char type) {
     fl.l_len    = 0;        // Length, 0 = to EOF
     fl.l_pid    = getpid(); // PID
 
+    FILE *f = fopen(filename, "ab+"); fclose(f); // Open and close the account file to create it if not existing
+
     if ((fd = open(filename, O_RDWR)) == -1) { // Open the file
         perror("open");
         exit(EXIT_FAILURE);

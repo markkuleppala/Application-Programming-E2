@@ -57,7 +57,7 @@ double deposit(char *account, char *value) {
     sprintf(full_account, "%s.bank", account); // Write full account file name to array
     int fd = lock(full_account, 2); // Write lock to account
     
-    if (atof(value) >= 0) {
+    if (atof(value) >= 0) { // Check that the value is >= 0
         double new_balance = getlastline(account) + atof(value); // Calculate new balance
         write_balance(account, &new_balance); // Write new balance to account
         unlock(fd); // Unlock account
