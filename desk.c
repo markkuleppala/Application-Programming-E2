@@ -134,38 +134,36 @@ int shortestline(void) {
     return location;
 }
 
-void *handlerequest(void *data) {
-    pthread_mutex_lock(&lock);
-    char *ptr = strtok(((struct Data *)data)->readbuffer, " ");
-    int i_max;
-    if (strcmp(ptr, "l") == 0) { i_max = 2; }
-    else if (strcmp(ptr, "t") == 0) { i_max = 4; }
-    //else if (strcmp(ptr, "report") == 0) { i_max = 1; }
-    else { i_max = 3; }
-    char *action[i_max+1]; // malloc?
+void *handlerequest(void *data) { // Function for handling read requests
+    pthread_mutex_lock(&lock); // Initialize mutex lock
+    char *ptr = strtok(((struct Data *)data)->readbuffer, " "); // Split request by whitespaces
+    int i_max; // Initialize upper limit for the for loop
+    if (strcmp(ptr, "l") == 0) { i_max = 2; } // Balance request
+    else if (strcmp(ptr, "t") == 0) { i_max = 4; } // Transfer request
+    else { i_max = 3; } // Deposit or withdrawal
+    char *action[i_max+1]; // Initialize array for saving the actions
     for (int i = 0 ; i < i_max; i++) { // Read the request
-        if ((action[i] = ptr) != NULL){
-            ptr = strtok(NULL, " ");
+        if ((action[i] = ptr) != NULL){ // Check that string splitting was succesful
+            ptr = strtok(NULL, " "); // Seek the for next action
         }
         else {
             fprintf(stderr, "Invalid request!\n");
-            pthread_mutex_unlock(&lock);
+            pthread_mutex_unlock(&lock); // Unlock the mutex lock
             return NULL;
         }
     }
     if (strcmp(action[0], "l") == 0) { // l - give balance
         if (balance(action[1])) { // Returns the balance
-            //printf("balance of %s checked\n", action[1]);
         }
     }
     else if (strcmp(action[0], "d") == 0) { // d - deposit
         if (deposit(action[1], action[2])) {
-            ((struct Data *)data)->d = atoi(action[2]);
+            ((struct Data *)data)->d = atoi(action[2]); // Save deposited value to the data structure
         }
     }
     else if (strcmp(action[0], "w") == 0) { // w - withdraw
         if (withdraw(action[1], action[2])) {
-            ((struct Data *)data)->w = atoi(action[2]);
+            ((struct Data *)data)->w = atoi(action[2]); // Save withdrawed value to the data structure
         }
     }
     else if (strcmp(action[0], "t") == 0) { // t - transfer
@@ -176,40 +174,37 @@ void *handlerequest(void *data) {
     else { // Unknown request
         printf("Invalid request!\n");
     }
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(&lock); // Unlock the mutex lock
     return NULL;
 }
 
-void desk(int j, int *fd1, int *fd2, int *flag) {
+void desk(int j, int *fd1, int *fd2, int *flag) { // Desk function reading and handling requests
     close(fd1[2*j+WRITE]); // Close writing end of fd1
     close(fd2[2*j+READ]); // Close reading end of fd2
-    pthread_t thread_id;
-    int flag_local = 0;
+    pthread_t thread_id; // Initialize thread id
+    int flag_local = 0; // Initialize local flag for reporting tracking
     int deposit_count = 0; // Initializing desk level deposit and withdraw counts
     int withdraw_count = 0;
     struct Data data; // Initializing data structure for passing variables between threads
     
-    if (pthread_mutex_init(&lock, NULL) != 0) {
-        perror("mutex init failed\n");
-    }
-    
+    if (pthread_mutex_init(&lock, NULL) != 0) { perror("mutex init failed\n"); } // Invalid mutex lock initializing
     
     while(1) { // Get task from master thread and handle the queue
-        if (*flag == 1) {
-            if (flag_local == 0) {
-                int arr[] = {deposit_count, withdraw_count};
-                write(fd2[2*j+WRITE], arr, sizeof(arr));
-                flag_local = 1;
+        if (*flag == 1) { // CTRL+T has been pressed, report the withdrawals and deposits
+            if (flag_local == 0) { // Local flag to indicate if reporting has been done
+                int arr[] = {deposit_count, withdraw_count}; // Initialize array for reporting d/w
+                write(fd2[2*j+WRITE], arr, sizeof(arr)); // Report d/w to master desk
+                flag_local = 1; // Raise local flag
             }
         }
         else if (*flag == 0 && read(fd1[2*j+READ], read_buffer, SIZE) > 0) { // Read task to queue from even pipe
-            if (flag_local == 1) { flag_local = 0; }
-            data.readbuffer = read_buffer;
+            if (flag_local == 1) { flag_local = 0; } // Reset the local flag
+            data.readbuffer = read_buffer; // Save read buffer to data structure
             data.d = 0; data.w = 0; // Initializing task level deposit and withdraw counts
-            pthread_create(&thread_id, NULL, handlerequest, (void*)&data);
+            pthread_create(&thread_id, NULL, handlerequest, (void*)&data); // Create thread to handle request
             pthread_join(thread_id, NULL); // Waiting for the return of the task
-            deposit_count += data.d;
-            withdraw_count += data.w;
+            deposit_count += data.d; // Save deposit count to data structure
+            withdraw_count += data.w; // Save withdraw count to data structure
             queue_arr[j]--; // Decrement the queue length
         }
     }

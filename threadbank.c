@@ -1,9 +1,8 @@
 #include "threadbank.h"
 #include "desk.h"
 
- // Signal handler
-void sig_handler(int signo) {
-    if (signo == SIGINT){// CTRL+C to abort the program
+void sig_handler(int signo) { // Signal handlers
+    if (signo == SIGINT){ // CTRL+C to abort the program
         if (pid_p == getpid()) { // Parent process
             printf("\nControl+C pressed, exiting the program.\n");
             free(fd1); free(fd2); free(request); // Free the allocated variables
@@ -26,26 +25,28 @@ void sig_handler(int signo) {
         }
     }
     else if (signo == SIGINFO && pid_p == getpid()) { // CTRL+T, master desk signal
+        deposit_master = 0; // Reset deposit master value
+        withdraw_master = 0; // Reset withdraw master value
         *flag = 1; // Raise the global flag
         printf("CTRL+T pressed, waiting for all desks to report to the master.\n");
-        for (int i = 0; i < n; i++) {
-            int arr[SIZE];
-            while (read(fd2[2*i+READ], arr, sizeof(arr)) <= 0) {
+        for (int i = 0; i < n; i++) { // Loop through all desk and wait for the d/w report
+            int arr[SIZE]; // Initialize read buffer array
+            while (read(fd2[2*i+READ], arr, sizeof(arr)) <= 0) { // Wait for the report
             }
-            fprintf(stdout, "d: %d w: %d from # %d\n", arr[0], arr[1], i+1);
-            deposit_master = arr[0];
-            withdraw_master = arr[1];
-            *flag = 0;
+            fprintf(stdout, "d: %d w: %d from # %d\n", arr[0], arr[1], i+1); // Print the report from the desk
+            deposit_master += arr[0]; // Increment the deposit master value
+            withdraw_master += arr[1]; // Increment the withdraw master value
         }
+        *flag = 0; // Set global flag to zero
         printf("All desks reported back. Deposits %d, withdraws %d.\n", deposit_master, withdraw_master);
     }
 }
 
 void master_desk(void) {
-    int s; // Shortest line helping variable
+    int s; // Shortest line help variable
 
-    while(1){ //signal(SIGINT, sig_handler) != SIG_ERR || signal(SIGINFO, sig_handler) != SIG_ERR) {
-        if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) {
+    while(1) { // Wait for the user input
+        if (fgets(request, INPUT_SIZE, stdin) != NULL && strlen(request) > 1) { // User input given
             request[strlen(request) - 1] = '\0'; // Convert last characther to NUL byte
             s = shortestline(); // Get the desk with shortest line
             queue_arr[s]++; // Increase the queue of desk s by one
@@ -56,19 +57,17 @@ void master_desk(void) {
 
 int main(int argc, char *argv[]) {
     struct sigaction act; // Initialize signal-handler
-    deposit_master = 0;
-    withdraw_master = 0;
     memset(&act, 0, sizeof(act)); // Set signal handler value as zero
-    act.sa_handler = sig_handler;
+    act.sa_handler = sig_handler; // Signal handler help variable
 
     sigaction(SIGINT,  &act, NULL); // Initialize SIGINT handler
 
-    if (!argv[1]) {
+    if (!argv[1]) { // No desk number variable given on startup
         printf("Desk number required as variable. Exiting.\n");
         exit(EXIT_FAILURE);
     }
-    n = atoi(argv[1]);
-    if (n <= 0) { printf("Invalid input. Exiting.\n"); exit(1); }
+    n = atoi(argv[1]); // Read number of desk from the argument
+    if (n <= 0) { printf("Invalid input. Exiting.\n"); exit(1); } // Value not a positive integer (1-N)
     printf("Welcome to ThreadBank manager!\n");
     pid_t pid_c = 0; // PID child
 
@@ -78,19 +77,19 @@ int main(int argc, char *argv[]) {
     if (pid_logger < 0) { perror("Fork failed, skip logging."); } // Failed fork
     else if (pid_logger == 0) { execl("./logger", init, (char*) NULL); } // Child process, write account creation to log
 
-    queue_arr = (int *)mmap(NULL, sizeof(int)*n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (queue_arr == MAP_FAILED) {
+    queue_arr = (int *)mmap(NULL, sizeof(int)*n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // Initialize queue array for tracking queue per desk
+    if (queue_arr == MAP_FAILED) { // Memory mapping failed
         perror("Error mmapping the queue: ");
         exit(EXIT_FAILURE);
     }
 
-    flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (flag == MAP_FAILED) {
+    flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // Initialize global flag for master desk halt
+    if (flag == MAP_FAILED) { // Memory mapping failed
         perror("Error mmapping the flag: ");
         exit(EXIT_FAILURE);
     }
 
-    *flag = 0;
+    *flag = 0; // Set global flag to zero
 
     fd1 = malloc(2*n*sizeof(fd1)); // Master to desk, d1[0] to read and fd1[1] to write
     fd2 = malloc(2*n*sizeof(fd2)); // Desk to master
@@ -117,7 +116,7 @@ int main(int argc, char *argv[]) {
     printf("The bank offers four different services:\nbalance (l), withdraw (w), transfer (t), deposit (d).\n");
 
     request = malloc(INPUT_SIZE); // Initialize request
-    if (request == NULL) { printf("No memory.\n"); }
+    if (request == NULL) { printf("No memory.\n"); exit(EXIT_FAILURE); } // Malloc failed, out of memory
 
    master_desk();
 }

@@ -20,12 +20,9 @@ double balance(char *number);
 double deposit(char *account, char *value);
 int withdraw(char *account, char *value);
 double transfer(char *account1, char *account2, char *value);
-int shortestline(void); // Should this be in threadbank.h?
+int shortestline(void);
 void *handlerequest(void *data);
 void desk(int j, int *fd1, int *fd2, int *flag);
-
-
-
 
 struct Data { // Data helper struct for desk-specific deposit and withdrawal
     char *readbuffer;
